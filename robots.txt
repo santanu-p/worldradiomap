@@ -1,0 +1,25 @@
+# World Radio Map - Robots.txt
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Crawl-delay for polite bots
+Crawl-delay: 1
+
+# Sitemaps
+Sitemap: https://worldradiomap.com/sitemap.xml
+
+# Allow Google and Bing to crawl everything
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /

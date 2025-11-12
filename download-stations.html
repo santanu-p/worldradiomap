@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Radio Stations Data</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+        }
+        h1 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #00d4ff;
+            color: #0a0e27;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(0, 212, 255, 0.1);
+            display: none;
+        }
+        .status.show {
+            display: block;
+        }
+        .info {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 Download Radio Stations</h1>
+        <p>Click the button below to download all radio station data locally.</p>
+        <p style="font-size: 14px; color: #00d4ff;">This will make your radio map load in &lt;1 second!</p>
+        
+        <button id="downloadBtn" class="btn" onclick="downloadStations()">
+            📥 Download Stations Data
+        </button>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="info">
+            <strong>What this does:</strong><br>
+            1. Fetches all radio stations from the API<br>
+            2. Saves them as stations.json<br>
+            3. Your app will load stations from this file instead<br>
+            <br>
+            <strong>Result:</strong> Lightning-fast loading (&lt;1 second)
+        </div>
+    </div>
+
+    <script>
+        async function downloadStations() {
+            const btn = document.getElementById('downloadBtn');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            status.className = 'status show';
+            status.textContent = '⏳ Fetching stations from API...';
+            
+            try {
+                const response = await fetch('https://de1.api.radio-browser.info/json/stations/search?order=votes&reverse=true&has_geo_info=true&limit=50000');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch stations');
+                }
+                
+                const data = await response.json();
+                status.textContent = `✅ Fetched ${data.length} stations! Preparing download...`;
+                
+                // Filter valid stations
+                const validStations = data.filter(station => 
+                    station.geo_lat && 
+                    station.geo_long && 
+                    station.url_resolved &&
+                    Math.abs(station.geo_lat) <= 90 &&
+                    Math.abs(station.geo_long) <= 180
+                );
+                
+                // Create blob and download
+                const blob = new Blob([JSON.stringify(validStations, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'stations.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                status.textContent = `✅ Download complete! ${validStations.length} stations saved to stations.json`;
+                
+                setTimeout(() => {
+                    status.innerHTML = `
+                        <strong style="color: #00d4ff;">Next Steps:</strong><br>
+                        1. Save stations.json to your radio folder<br>
+                        2. Open app.js and change line 67 to:<br>
+                        <code style="background: rgba(0,0,0,0.3); padding: 5px; display: block; margin: 10px 0;">
+                        const response = await fetch('./stations.json');
+                        </code>
+                        3. Refresh your radio map - it will now load in &lt;1 second! 🚀
+                    `;
+                }, 2000);
+                
+                btn.textContent = '✅ Downloaded!';
+                
+            } catch (error) {
+                status.textContent = `❌ Error: ${error.message}. Please try again.`;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
