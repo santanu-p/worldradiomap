@@ -47,27 +47,73 @@ const visualizer = document.getElementById('musicVisualizer');
 // Set initial volume
 audioPlayer.volume = 0.7;
 
-// Create floating particles for visualizer
+// Create cool fast visualizer effects
 function createFloatingParticles() {
-    const colors = ['#00d4ff', '#0095ff', '#00ffcc', '#0080ff', '#00b8e6'];
+    visualizer.innerHTML = ''; // Clear existing
     
-    for (let i = 0; i < 20; i++) {
+    const colors = ['#00d4ff', '#0095ff', '#00ffcc', '#0080ff', '#00b8e6', '#00e5ff'];
+    
+    // Fast floating particles (30 particles)
+    for (let i = 0; i < 30; i++) {
         const particle = document.createElement('div');
         particle.className = 'floating-particle';
         
-        const size = Math.random() * 60 + 20;
+        const size = Math.random() * 40 + 10;
         const color = colors[Math.floor(Math.random() * colors.length)];
         const left = Math.random() * 100;
-        const delay = Math.random() * 15;
+        const top = Math.random() * 100;
+        const delay = Math.random() * 4;
+        const tx = (Math.random() - 0.5) * 200;
+        const ty = (Math.random() - 0.5) * 200;
         
         particle.style.width = size + 'px';
         particle.style.height = size + 'px';
         particle.style.background = `radial-gradient(circle, ${color}, transparent)`;
         particle.style.left = left + '%';
-        particle.style.bottom = '-100px';
+        particle.style.top = top + '%';
         particle.style.animationDelay = delay + 's';
+        particle.style.setProperty('--tx', tx + 'px');
+        particle.style.setProperty('--ty', ty + 'px');
+        particle.style.color = color;
         
         visualizer.appendChild(particle);
+    }
+    
+    // Fast pulse rings (5 rings)
+    for (let i = 0; i < 5; i++) {
+        const ring = document.createElement('div');
+        ring.className = 'pulse-ring';
+        ring.style.animationDelay = (i * 0.3) + 's';
+        visualizer.appendChild(ring);
+    }
+    
+    // Light streaks (15 streaks)
+    for (let i = 0; i < 15; i++) {
+        const streak = document.createElement('div');
+        streak.className = 'light-streak';
+        streak.style.left = Math.random() * 100 + '%';
+        streak.style.animationDelay = Math.random() * 2 + 's';
+        streak.style.setProperty('--rotation', (Math.random() * 30 - 15) + 'deg');
+        visualizer.appendChild(streak);
+    }
+    
+    // Energy waves (3 layers)
+    for (let i = 0; i < 3; i++) {
+        const wave = document.createElement('div');
+        wave.className = 'wave';
+        wave.style.animationDelay = (i * 1) + 's';
+        wave.style.opacity = 0.3 - (i * 0.1);
+        visualizer.appendChild(wave);
+    }
+    
+    // Rotating circles (3 circles)
+    for (let i = 0; i < 3; i++) {
+        const circle = document.createElement('div');
+        circle.className = 'rotating-circle';
+        circle.style.animationDelay = (i * 2.6) + 's';
+        circle.style.width = (200 + i * 100) + 'px';
+        circle.style.height = (200 + i * 100) + 'px';
+        visualizer.appendChild(circle);
     }
 }
 
