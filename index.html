@@ -246,7 +246,7 @@
         }
 
         .sidebar {
-            position: absolute;
+            position: fixed;
             right: -100%;
             top: 80px;
             width: 90%;
@@ -254,7 +254,7 @@
             height: calc(100% - 80px);
             background: linear-gradient(180deg, rgba(10, 14, 39, 0.98) 0%, rgba(15, 20, 45, 0.98) 100%);
             backdrop-filter: blur(15px);
-            z-index: 1000;
+            z-index: 1002;
             padding: 20px;
             overflow-y: auto;
             transition: right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -264,6 +264,54 @@
 
         .sidebar.active {
             right: 0;
+        }
+
+        /* Sidebar Close Button */
+        .sidebar-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 0, 80, 0.2);
+            border: 2px solid rgba(255, 0, 80, 0.5);
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 26px;
+            color: #ff0050;
+            transition: all 0.3s;
+            z-index: 10;
+            padding: 0;
+        }
+
+        .sidebar-close:hover {
+            background: rgba(255, 0, 80, 0.4);
+            border-color: #ff0050;
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 0, 80, 0.5);
+        }
+
+        /* Sidebar Overlay for Mobile */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(3px);
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
         }
 
         .sidebar h2 {
@@ -867,6 +915,11 @@
             .header {
                 padding: 10px 15px;
                 gap: 8px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1003;
             }
 
             .header h1 {
@@ -890,16 +943,24 @@
                 font-size: 11px;
             }
 
+            #map {
+                margin-top: 70px;
+            }
+
             .sidebar {
                 top: 70px;
-                height: calc(100% - 70px);
-                width: 95%;
-                padding: 15px;
+                height: calc(100% - 170px);
+                width: 100%;
+                max-width: 100%;
+                padding: 20px 15px 15px;
+                border-left: none;
+                border-top: 2px solid rgba(0, 212, 255, 0.3);
             }
 
             .sidebar h2 {
                 font-size: 20px;
                 margin-bottom: 15px;
+                padding-right: 50px;
             }
 
             .station-item {
@@ -913,6 +974,9 @@
 
             .player {
                 padding: 15px;
+                position: fixed;
+                bottom: 0;
+                z-index: 1003;
             }
 
             .player-content {
@@ -1009,9 +1073,13 @@
                 padding: 8px 10px;
             }
 
+            #map {
+                margin-top: 120px;
+            }
+
             .sidebar {
-                top: 110px;
-                height: calc(100% - 110px);
+                top: 120px;
+                height: calc(100% - 220px);
             }
 
             .player-content {
@@ -1043,11 +1111,16 @@
         @media screen and (max-width: 768px) and (orientation: landscape) {
             .sidebar {
                 top: 60px;
-                height: calc(100% - 60px);
+                height: calc(100% - 160px);
+                max-width: 50%;
             }
 
             .stats {
                 bottom: 100px;
+            }
+
+            #map {
+                margin-top: 60px;
             }
         }
 
@@ -1107,8 +1180,12 @@
         <div id="loadTime" style="font-size: 11px; color: #888; margin-top: 5px;"></div>
     </div>
 
+    <!-- Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
     <!-- Sidebar -->
     <div id="sidebar" class="sidebar">
+        <button id="closeSidebar" class="sidebar-close">✕</button>
         <h2>Radio Stations</h2>
         <ul id="stationList" class="station-list"></ul>
     </div>

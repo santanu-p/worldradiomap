@@ -703,8 +703,24 @@ volumeSlider.addEventListener('input', (e) => {
 });
 
 // Toggle sidebar
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const closeSidebarBtn = document.getElementById('closeSidebar');
+
 document.getElementById('toggleSidebar').addEventListener('click', () => {
     sidebar.classList.toggle('active');
+    sidebarOverlay.classList.toggle('active');
+});
+
+// Close sidebar button
+closeSidebarBtn.addEventListener('click', () => {
+    sidebar.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
+});
+
+// Close sidebar when clicking overlay
+sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
 });
 
 // Search functionality with debouncing
@@ -849,14 +865,5 @@ window.addEventListener('DOMContentLoaded', () => {
         visualizer.classList.remove('active');
     });
     
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 768) {
-            if (sidebar.classList.contains('active') && 
-                !sidebar.contains(e.target) && 
-                !document.getElementById('toggleSidebar').contains(e.target)) {
-                sidebar.classList.remove('active');
-            }
-        }
-    });
+    // Close sidebar when clicking outside on mobile (removed - now using overlay)
 });
