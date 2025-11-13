@@ -706,6 +706,52 @@ volumeSlider.addEventListener('input', (e) => {
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const closeSidebarBtn = document.getElementById('closeSidebar');
 
+// Hamburger Menu for Mobile
+const hamburgerMenu = document.getElementById('hamburgerMenu');
+const mobileMenu = document.getElementById('mobileMenu');
+const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+const searchInputMobile = document.getElementById('searchInputMobile');
+const browseStationsMobile = document.getElementById('browseStationsMobile');
+const searchStationsMobile = document.getElementById('searchStationsMobile');
+const closeMenuMobile = document.getElementById('closeMenuMobile');
+
+// Toggle mobile menu
+hamburgerMenu.addEventListener('click', () => {
+    hamburgerMenu.classList.toggle('active');
+    mobileMenu.classList.toggle('active');
+    mobileMenuOverlay.classList.toggle('active');
+});
+
+// Close mobile menu
+function closeMobileMenu() {
+    hamburgerMenu.classList.remove('active');
+    mobileMenu.classList.remove('active');
+    mobileMenuOverlay.classList.remove('active');
+}
+
+closeMenuMobile.addEventListener('click', closeMobileMenu);
+mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+
+// Browse stations from mobile menu
+browseStationsMobile.addEventListener('click', () => {
+    closeMobileMenu();
+    sidebar.classList.add('active');
+    sidebarOverlay.classList.add('active');
+});
+
+// Search from mobile menu
+searchStationsMobile.addEventListener('click', () => {
+    searchStations();
+    closeMobileMenu();
+});
+
+// Mobile search input
+searchInputMobile.addEventListener('input', () => {
+    searchInput.value = searchInputMobile.value;
+    searchStations();
+});
+
+// Desktop toggle sidebar
 document.getElementById('toggleSidebar').addEventListener('click', () => {
     sidebar.classList.toggle('active');
     sidebarOverlay.classList.toggle('active');
@@ -865,5 +911,41 @@ window.addEventListener('DOMContentLoaded', () => {
         visualizer.classList.remove('active');
     });
     
-    // Close sidebar when clicking outside on mobile (removed - now using overlay)
+    // Close panels when clicking on map or open space (one by one)
+    document.addEventListener('click', (e) => {
+        // Check if clicked element is the map or map container
+        const isMapClick = e.target.id === 'map' || 
+                          e.target.classList.contains('leaflet-container') ||
+                          e.target.classList.contains('leaflet-pane') ||
+                          e.target.classList.contains('leaflet-tile-pane') ||
+                          e.target.closest('.leaflet-container');
+        
+        // Don't close if clicking on player, buttons, or inputs
+        const isPlayerClick = e.target.closest('.player');
+        const isHeaderClick = e.target.closest('.header');
+        const isSidebarClick = e.target.closest('.sidebar');
+        const isMobileMenuClick = e.target.closest('.mobile-menu');
+        const isButtonClick = e.target.closest('button') || e.target.closest('.btn');
+        const isInputClick = e.target.tagName === 'INPUT';
+        
+        if (isPlayerClick || isHeaderClick || isButtonClick || isInputClick) {
+            return; // Don't close anything if clicking on these elements
+        }
+        
+        // Close panels one by one in reverse order (last opened first)
+        if (isMapClick || (!isSidebarClick && !isMobileMenuClick)) {
+            // First, close sidebar if it's open
+            if (sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                return; // Stop here, close one at a time
+            }
+            
+            // Then, close mobile menu if it's open
+            if (mobileMenu.classList.contains('active')) {
+                closeMobileMenu();
+                return; // Stop here
+            }
+        }
+    });
 });
