@@ -2,7 +2,7 @@
 
 > Discover and listen to 10,000+ live radio stations from around the world on an interactive map
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://your-demo-url.com)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://worldradiomap.vercel.app)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -23,7 +23,7 @@
 
 ## 🚀 Live Demo
 
-**[Try it now →](https://your-demo-url.com)**
+**[Try it now → https://worldradiomap.vercel.app](https://worldradiomap.vercel.app)**
 
 ## 📸 Screenshots
 

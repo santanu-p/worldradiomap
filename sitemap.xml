@@ -5,14 +5,14 @@
     
     <!-- Home Page -->
     <url>
-        <loc>https://worldradiomap.com/</loc>
-        <lastmod>2025-11-12</lastmod>
+        <loc>https://worldradiomap.vercel.app/</loc>
+        <lastmod>2025-11-13</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
-        <xhtml:link rel="alternate" hreflang="en" href="https://worldradiomap.com/"/>
-        <xhtml:link rel="alternate" hreflang="es" href="https://worldradiomap.com/es/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://worldradiomap.com/fr/"/>
-        <xhtml:link rel="alternate" hreflang="de" href="https://worldradiomap.com/de/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://worldradiomap.vercel.app/"/>
+        <xhtml:link rel="alternate" hreflang="es" href="https://worldradiomap.vercel.app/es/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://worldradiomap.vercel.app/fr/"/>
+        <xhtml:link rel="alternate" hreflang="de" href="https://worldradiomap.vercel.app/de/"/>
     </url>
     
     <!-- Add more URLs as your site grows -->

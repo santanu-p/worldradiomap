@@ -58,10 +58,11 @@ You need to create these image files:
 - Submit your sitemap: `https://yourdomain.com/sitemap.xml`
 
 #### 4. **Update URLs in Files**
-Replace `https://worldradiomap.com/` with your actual domain in:
-- `index.html` (all meta tags)
-- `sitemap.xml`
-- `robots.txt`
+All URLs have been updated to `https://worldradiomap.vercel.app/` in:
+- ✅ `index.html` (all meta tags)
+- ✅ `sitemap.xml`
+- ✅ `robots.txt`
+- ✅ `README-GITHUB.md`
 
 #### 5. **Google Analytics & Search Console**
 Add Google Analytics tracking code before `</head>`:

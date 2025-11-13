@@ -8,7 +8,7 @@ Disallow: /admin/
 Crawl-delay: 1
 
 # Sitemaps
-Sitemap: https://worldradiomap.com/sitemap.xml
+Sitemap: https://worldradiomap.vercel.app/sitemap.xml
 
 # Allow Google and Bing to crawl everything
 User-agent: Googlebot
