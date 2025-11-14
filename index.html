@@ -297,9 +297,13 @@
             gap: 12px;
             width: 320px;
             max-width: calc(100% - 40px);
-            z-index: 1001;
+            z-index: 1005;
             pointer-events: none;
             transition: transform 0.35s ease, opacity 0.25s;
+        }
+
+        .map-controls.open {
+            pointer-events: auto;
         }
 
         .map-controls .control-card {
@@ -729,7 +733,7 @@
             background: linear-gradient(135deg, rgba(10, 14, 39, 0.98) 0%, rgba(26, 31, 58, 0.98) 100%);
             backdrop-filter: blur(15px);
             padding: 25px 30px calc(25px + env(safe-area-inset-bottom, 0));
-            z-index: 1000;
+            z-index: 1500;
             box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
             border-top: 2px solid rgba(0, 212, 255, 0.3);
             display: none;
@@ -787,6 +791,62 @@
             display: flex;
             gap: 20px;
             align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .audio-enhancements {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-left: 10px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1200;
+            pointer-events: auto;
+        }
+
+        .atmos-toggle {
+            border-radius: 999px;
+            border: 2px solid rgba(0, 212, 255, 0.5);
+            background: rgba(0, 212, 255, 0.1);
+            color: #e2fbff;
+            padding: 8px 18px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-transform: uppercase;
+            font-size: 12px;
+            touch-action: manipulation;
+        }
+
+        .atmos-toggle:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 4px 18px rgba(0, 212, 255, 0.3);
+        }
+
+        .atmos-toggle.active {
+            background: linear-gradient(135deg, #00d4ff 0%, #ff4de1 100%);
+            color: #04162b;
+            border-color: transparent;
+            box-shadow: 0 8px 22px rgba(0, 212, 255, 0.45);
+        }
+
+        .atmos-toggle:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .atmos-status {
+            font-size: 11px;
+            letter-spacing: 0.6px;
+            color: #8fdcff;
+            text-transform: uppercase;
+        }
+
+        .atmos-status span {
+            font-weight: 700;
+            color: #00f1ff;
         }
 
         .control-btn {
@@ -969,18 +1029,23 @@
         }
 
         .stats {
-            position: absolute;
-            bottom: calc(180px + env(safe-area-inset-bottom, 0));
-            left: 10px;
+            position: fixed;
+            bottom: calc(140px + env(safe-area-inset-bottom, 0));
+            right: 20px;
+            left: auto;
             background: linear-gradient(135deg, rgba(10, 14, 39, 0.95) 0%, rgba(15, 20, 45, 0.95) 100%);
             backdrop-filter: blur(10px);
-            padding: 12px 15px;
+            padding: 12px 16px;
             border-radius: 12px;
-            z-index: 999;
+            z-index: 1002;
             font-size: 12px;
             border: 2px solid rgba(0, 212, 255, 0.3);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-            min-width: 140px;
+            min-width: 160px;
+            max-width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .stats-title {
@@ -1263,16 +1328,15 @@
                 top: auto;
                 left: 10px;
                 right: 10px;
-                bottom: calc(110px + env(safe-area-inset-bottom, 0));
+                bottom: calc(170px + env(safe-area-inset-bottom, 0));
                 width: auto;
                 max-width: none;
-                pointer-events: auto;
                 transform: translateY(calc(100% + 40px));
                 opacity: 0;
                 gap: 10px;
                 max-height: 55vh;
                 overflow-y: auto;
-                padding-bottom: env(safe-area-inset-bottom, 0);
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
             }
 
             .map-controls.open {
@@ -1288,6 +1352,8 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
+                bottom: calc(220px + env(safe-area-inset-bottom, 0));
+                transition: bottom 0.3s ease;
             }
 
             /* Hide search container on mobile, show in mobile menu */
@@ -1328,7 +1394,7 @@
                 padding: 18px 18px calc(22px + env(safe-area-inset-bottom, 0));
                 position: fixed;
                 bottom: 0;
-                z-index: 1003;
+                z-index: 1500;
             }
 
             .player-content {
@@ -1356,11 +1422,14 @@
             }
 
             .stats {
-                bottom: calc(190px + env(safe-area-inset-bottom, 0));
-                left: 5px;
-                padding: 10px;
+                top: calc(80px + env(safe-area-inset-top, 0));
+                bottom: auto;
+                right: 12px;
+                left: auto;
+                padding: 10px 14px;
                 font-size: 11px;
-                min-width: 120px;
+                min-width: 140px;
+                max-width: 210px;
             }
 
             .stats-title {
@@ -1452,13 +1521,28 @@
                 gap: 10px;
             }
 
+            .audio-enhancements {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.15);
+                padding-left: 0;
+                padding-top: 10px;
+                align-items: center;
+            }
+
             .volume-control {
                 width: 100%;
                 justify-content: center;
             }
 
             .stats {
-                display: none;
+                display: flex;
+                top: calc(70px + env(safe-area-inset-top, 0));
+                right: 10px;
+                left: auto;
+                font-size: 10px;
+                min-width: 130px;
+                padding: 8px 12px;
             }
 
             .pulse-ring {
@@ -1476,7 +1560,10 @@
             }
 
             .stats {
-                bottom: calc(160px + env(safe-area-inset-bottom, 0));
+                top: calc(65px + env(safe-area-inset-top, 0));
+                bottom: auto;
+                right: 10px;
+                left: auto;
             }
 
             #map {
@@ -1658,6 +1745,10 @@
                 <div class="volume-control">
                     🔊
                     <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
+                </div>
+                <div class="audio-enhancements">
+                    <button id="atmosToggle" class="atmos-toggle" type="button" aria-pressed="false">Dolby Atmos</button>
+                    <div class="atmos-status">Status: <span id="atmosStatus">Off</span></div>
                 </div>
             </div>
         </div>

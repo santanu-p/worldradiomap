@@ -15,6 +15,20 @@ let userLocation = null;
 let visualizerReady = false;
 let markerLoadSequence = 0;
 let filterRequestToken = 0;
+const ATMOS_STORAGE_KEY = 'wrm-atmos-enabled';
+const supportsSpatialAudio = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
+const atmosEngine = {
+    context: null,
+    source: null,
+    dryGain: null,
+    wetGain: null,
+    convolver: null,
+    stereoPanner: null,
+    lfo: null,
+    lfoGain: null,
+    airFilter: null,
+    enabled: false
+};
 
 const FEATURED_STATIONS = [
     { name: "BBC Radio 1", country: "United Kingdom", tags: "pop, hits, charts", votes: 9800, geo_lat: 51.5074, geo_long: -0.1278, url_resolved: "http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one", stationuuid: "featured-bbc1" },
@@ -128,8 +142,11 @@ const regionControls = document.getElementById('regionControls');
 const mapControlsContainer = document.getElementById('mapControls');
 const mapControlsToggle = document.getElementById('mapControlsToggle');
 const mapControlsOverlay = document.getElementById('mapControlsOverlay');
+const atmosToggle = document.getElementById('atmosToggle');
+const atmosStatusLabel = document.getElementById('atmosStatus');
 
 // Set initial volume
+audioPlayer.crossOrigin = 'anonymous';
 audioPlayer.volume = 0.7;
 
 // Create cool fast visualizer effects
@@ -308,6 +325,149 @@ function setMapPanelVisibility(forceOpen) {
 
 function closeMobileMapPanel() {
     setMapPanelVisibility(false);
+}
+
+function createImpulseResponse(context) {
+    const duration = 1.6;
+    const sampleRate = context.sampleRate;
+    const length = sampleRate * duration;
+    const impulse = context.createBuffer(2, length, sampleRate);
+    for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
+        const buffer = impulse.getChannelData(channel);
+        for (let i = 0; i < length; i++) {
+            buffer[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+        }
+    }
+    return impulse;
+}
+
+function ensureAtmosChain() {
+    if (!supportsSpatialAudio) {
+        throw new Error('Web Audio API not supported');
+    }
+    if (atmosEngine.source) {
+        return atmosEngine;
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const context = atmosEngine.context || new AudioCtx();
+    const source = context.createMediaElementSource(audioPlayer);
+    const dryGain = context.createGain();
+    const wetGain = context.createGain();
+    const convolver = context.createConvolver();
+    const airFilter = context.createBiquadFilter();
+    const stereoPanner = context.createStereoPanner();
+    const lfo = context.createOscillator();
+    const lfoGain = context.createGain();
+
+    convolver.buffer = createImpulseResponse(context);
+    airFilter.type = 'highshelf';
+    airFilter.frequency.value = 4200;
+    airFilter.gain.value = 0;
+    stereoPanner.pan.value = 0;
+    lfo.frequency.value = 0.12;
+    lfoGain.gain.value = 0;
+
+    lfo.connect(lfoGain).connect(stereoPanner.pan);
+    lfo.start();
+
+    dryGain.gain.value = 1;
+    wetGain.gain.value = 0;
+
+    source.connect(airFilter);
+    airFilter.connect(stereoPanner);
+
+    stereoPanner.connect(dryGain);
+    dryGain.connect(context.destination);
+
+    stereoPanner.connect(convolver);
+    convolver.connect(wetGain);
+    wetGain.connect(context.destination);
+
+    atmosEngine.context = context;
+    atmosEngine.source = source;
+    atmosEngine.dryGain = dryGain;
+    atmosEngine.wetGain = wetGain;
+    atmosEngine.convolver = convolver;
+    atmosEngine.stereoPanner = stereoPanner;
+    atmosEngine.lfo = lfo;
+    atmosEngine.lfoGain = lfoGain;
+    atmosEngine.airFilter = airFilter;
+
+    return atmosEngine;
+}
+
+function updateAtmosUI(statusText) {
+    if (!atmosToggle || !atmosStatusLabel) return;
+    const state = atmosEngine.enabled;
+    atmosToggle.classList.toggle('active', state);
+    atmosToggle.setAttribute('aria-pressed', state ? 'true' : 'false');
+    atmosStatusLabel.textContent = statusText || (state ? 'On' : 'Off');
+}
+
+async function setAtmosEnabled(state) {
+    if (!supportsSpatialAudio) return;
+    try {
+        const engine = ensureAtmosChain();
+        await engine.context.resume();
+        const now = engine.context.currentTime;
+        const targetWet = state ? 0.65 : 0;
+        const targetDry = state ? 0.8 : 1;
+        const lfoDepth = state ? 0.4 : 0;
+        const stereoBias = state ? 0.15 : 0;
+        const airLift = state ? 5 : 0;
+        engine.wetGain.gain.setTargetAtTime(targetWet, now, 0.05);
+        engine.dryGain.gain.setTargetAtTime(targetDry, now, 0.05);
+        if (engine.lfoGain) {
+            engine.lfoGain.gain.setTargetAtTime(lfoDepth, now, 0.2);
+        }
+        if (engine.stereoPanner) {
+            engine.stereoPanner.pan.setTargetAtTime(stereoBias, now, 0.2);
+        }
+        if (engine.airFilter) {
+            engine.airFilter.gain.setTargetAtTime(airLift, now, 0.2);
+        }
+        atmosEngine.enabled = state;
+        updateAtmosUI(state ? 'Spatial+' : 'Off');
+        if (window.localStorage) {
+            localStorage.setItem(ATMOS_STORAGE_KEY, state ? 'on' : 'off');
+        }
+    } catch (error) {
+        console.warn('Unable to toggle Atmos feature', error);
+        atmosEngine.enabled = false;
+        const fallback = error && error.name === 'NotAllowedError' ? 'Tap to enable' : 'Error';
+        updateAtmosUI(fallback);
+    }
+}
+
+function toggleAtmos() {
+    setAtmosEnabled(!atmosEngine.enabled);
+}
+
+function initializeAtmosFeature() {
+    if (!atmosToggle || !atmosStatusLabel) return;
+    if (!supportsSpatialAudio) {
+        atmosToggle.disabled = true;
+        atmosToggle.title = 'Spatial audio is unavailable in this browser.';
+        updateAtmosUI('Unsupported');
+        return;
+    }
+    atmosToggle.disabled = false;
+    atmosToggle.title = 'Blend a simulated Atmos field into the stream.';
+    atmosToggle.addEventListener('click', toggleAtmos);
+    let savedPreference = null;
+    try {
+        if (window.localStorage) {
+            savedPreference = localStorage.getItem(ATMOS_STORAGE_KEY);
+        }
+    } catch (error) {
+        console.warn('Unable to read Atmos preference', error);
+    }
+    if (savedPreference === 'on') {
+        updateAtmosUI('Loading...');
+        setAtmosEnabled(true);
+    } else {
+        updateAtmosUI('Off');
+    }
 }
 
 // IndexedDB caching
@@ -908,6 +1068,7 @@ function registerUIBindings() {
             closeMobileMapPanel();
         }
     });
+    initializeAtmosFeature();
 }
 
 function createStationListItem(station) {
