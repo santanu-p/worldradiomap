@@ -7,31 +7,106 @@ let currentStation = null;
 let isPlaying = false;
 let map;
 let loadStartTime = Date.now();
+let baseLayers = {};
+let activeBaseLayerKey = 'dark';
+let filteredStations = [];
+let activeFilterKey = 'all';
+let userLocation = null;
+let visualizerReady = false;
+let markerLoadSequence = 0;
+let filterRequestToken = 0;
+
+const FEATURED_STATIONS = [
+    { name: "BBC Radio 1", country: "United Kingdom", tags: "pop, hits, charts", votes: 9800, geo_lat: 51.5074, geo_long: -0.1278, url_resolved: "http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one", stationuuid: "featured-bbc1" },
+    { name: "BBC World Service", country: "United Kingdom", tags: "news, talk, global", votes: 9400, geo_lat: 51.5074, geo_long: -0.1278, url_resolved: "http://stream.live.vc.bbcmedia.co.uk/bbc_world_service", stationuuid: "featured-bbc-world" },
+    { name: "BBC 6 Music", country: "United Kingdom", tags: "indie, alternative", votes: 6200, geo_lat: 51.5074, geo_long: -0.1278, url_resolved: "http://stream.live.vc.bbcmedia.co.uk/bbc_6music", stationuuid: "featured-bbc6" },
+    { name: "NPR News", country: "United States", tags: "news, talk", votes: 9100, geo_lat: 38.8951, geo_long: -77.0364, url_resolved: "http://npr-ice.streamguys1.com/live.mp3", stationuuid: "featured-npr" },
+    { name: "KEXP 90.3 FM", country: "United States", tags: "indie, live sessions", votes: 8600, geo_lat: 47.6062, geo_long: -122.3321, url_resolved: "http://live-aacplus-64.kexp.org/kexp64.aac", stationuuid: "featured-kexp" },
+    { name: "Hot 97 New York", country: "United States", tags: "hip hop, urban", votes: 7800, geo_lat: 40.7128, geo_long: -74.006, url_resolved: "https://playerservices.streamtheworld.com/api/livestream-redirect/WQHTFM.mp3", stationuuid: "featured-hot97" },
+    { name: "Jazz24", country: "United States", tags: "jazz, smooth", votes: 6500, geo_lat: 47.6205, geo_long: -122.3493, url_resolved: "https://live.wostreaming.net/direct/ppm-jazz24mp3-128", stationuuid: "featured-jazz24" },
+    { name: "Classical KING FM", country: "United States", tags: "classical", votes: 5200, geo_lat: 47.6132, geo_long: -122.343, url_resolved: "https://live.wostreaming.net/direct/ppm-classicalkingmp3-128", stationuuid: "featured-king" },
+    { name: "KCRW Eclectic 24", country: "United States", tags: "eclectic, alternative", votes: 6100, geo_lat: 34.0195, geo_long: -118.4912, url_resolved: "https://kcrw.streamguys1.com/kcrw_192k_mp3_e24", stationuuid: "featured-kcrw" },
+    { name: "Radio Paradise", country: "United States", tags: "adult alternative", votes: 7000, geo_lat: 33.738, geo_long: -116.408, url_resolved: "https://stream.radioparadise.com/aac-320", stationuuid: "featured-radioparadise" },
+    { name: "Radio France Internationale", country: "France", tags: "news, world", votes: 5600, geo_lat: 48.8566, geo_long: 2.3522, url_resolved: "https://live02.rfi.fr/rfimonde-64k.mp3", stationuuid: "featured-rfi" },
+    { name: "FIP", country: "France", tags: "eclectic, lounge", votes: 6300, geo_lat: 48.8566, geo_long: 2.3522, url_resolved: "http://direct.fipradio.fr/live/fip-midfi.mp3", stationuuid: "featured-fip" },
+    { name: "TSF Jazz", country: "France", tags: "jazz", votes: 4800, geo_lat: 48.8566, geo_long: 2.3522, url_resolved: "https://tsfjazz.ice.infomaniak.ch/tsfjazz-high.mp3", stationuuid: "featured-tsf" },
+    { name: "Radio 538", country: "Netherlands", tags: "pop, dance", votes: 7200, geo_lat: 52.3676, geo_long: 4.9041, url_resolved: "https://19983.live.streamtheworld.com/RADIO538.mp3", stationuuid: "featured-538" },
+    { name: "Radio Veronica", country: "Netherlands", tags: "classic rock", votes: 5100, geo_lat: 52.3702, geo_long: 4.8952, url_resolved: "https://playerservices.streamtheworld.com/api/livestream-redirect/VERONICAAAC.aac", stationuuid: "featured-veronica" },
+    { name: "Radio Nova", country: "Ireland", tags: "classic rock", votes: 3900, geo_lat: 53.3498, geo_long: -6.2603, url_resolved: "https://novastream.nova.ie/stream", stationuuid: "featured-nova" },
+    { name: "RTÉ 2FM", country: "Ireland", tags: "pop, hits", votes: 5400, geo_lat: 53.3498, geo_long: -6.2603, url_resolved: "https://icecast.rte.ie/2fm", stationuuid: "featured-rte2fm" },
+    { name: "SWR3", country: "Germany", tags: "pop, adult contemporary", votes: 5800, geo_lat: 48.761, geo_long: 8.2398, url_resolved: "https://swr-swr3-live.sslcast.addradio.de/swr/swr3/live/aac/128/stream.aac", stationuuid: "featured-swr3" },
+    { name: "Radio Swiss Pop", country: "Switzerland", tags: "pop, mix", votes: 4300, geo_lat: 46.948, geo_long: 7.4474, url_resolved: "http://stream.srg-ssr.ch/m/rsp/mp3_128", stationuuid: "featured-rsp" },
+    { name: "Radio Swiss Jazz", country: "Switzerland", tags: "jazz", votes: 3600, geo_lat: 46.2044, geo_long: 6.1432, url_resolved: "http://stream.srg-ssr.ch/m/rsj/aacp_96", stationuuid: "featured-rsj" },
+    { name: "Radio Mirchi Mumbai", country: "India", tags: "bollywood, hits", votes: 6400, geo_lat: 19.076, geo_long: 72.8777, url_resolved: "https://sc-bb-mirchi-ice.streamguys1.com/mirchi.mp3", stationuuid: "featured-mirchi" },
+    { name: "Radio City Freedom", country: "India", tags: "indie, alternative", votes: 3200, geo_lat: 12.9716, geo_long: 77.5946, url_resolved: "https://prclive1.listenon.in/RADIOCITY.mp3", stationuuid: "featured-cityfreedom" },
+    { name: "All India Radio", country: "India", tags: "news, culture", votes: 6000, geo_lat: 28.6139, geo_long: 77.209, url_resolved: "http://air.pc.cdn.bitgravity.com/air/live/pbaudio134/playlist.m3u8", stationuuid: "featured-air" },
+    { name: "NHK Radio Japan", country: "Japan", tags: "news, talk", votes: 4100, geo_lat: 35.6762, geo_long: 139.6503, url_resolved: "http://nhkradioakr-i.akamaihd.net/hls/live/511633/1-r1/1-r1-01.m3u8", stationuuid: "featured-nhk" },
+    { name: "triple j", country: "Australia", tags: "alternative, new music", votes: 6900, geo_lat: -33.8688, geo_long: 151.2093, url_resolved: "https://live-radio01.mediahubaustralia.com/2TJW/mp3/", stationuuid: "featured-triplej" },
+    { name: "Double J", country: "Australia", tags: "adult alternative", votes: 4200, geo_lat: -33.8688, geo_long: 151.2093, url_resolved: "https://live-radio01.mediahubaustralia.com/DJDW/mp3/", stationuuid: "featured-doublej" },
+    { name: "ABC Classic FM", country: "Australia", tags: "classical", votes: 5000, geo_lat: -33.8688, geo_long: 151.2093, url_resolved: "http://live-radio01.mediahubaustralia.com/2FCW/mp3/", stationuuid: "featured-abc-classic" },
+    { name: "CBC Music Toronto", country: "Canada", tags: "adult contemporary", votes: 4700, geo_lat: 43.6532, geo_long: -79.3832, url_resolved: "https://cbcmp3.ic.llnwd.net/stream/cbcmp3_cbc_r2_tor", stationuuid: "featured-cbc2" },
+    { name: "Radio Canada Première", country: "Canada", tags: "news, talk", votes: 3600, geo_lat: 45.5017, geo_long: -73.5673, url_resolved: "https://icecast.radio-canada.ca/radiounemtl.mp3", stationuuid: "featured-rc-premiere" },
+    { name: "Radio Globo Rio", country: "Brazil", tags: "news, talk", votes: 4400, geo_lat: -22.9068, geo_long: -43.1729, url_resolved: "https://20583.live.streamtheworld.com/RADIO_GLOBOAAC.aac", stationuuid: "featured-globo" },
+    { name: "Rádio Mix São Paulo", country: "Brazil", tags: "pop, hits", votes: 5200, geo_lat: -23.5505, geo_long: -46.6333, url_resolved: "https://playerservices.streamtheworld.com/api/livestream-redirect/MIXFMAAC.aac", stationuuid: "featured-mix" },
+    { name: "Smooth Jazz Florida", country: "United States", tags: "smooth jazz", votes: 3900, geo_lat: 26.1224, geo_long: -80.1373, url_resolved: "https://us4.internet-radio.com/proxy/smoothjazzflorida?mp=/stream", stationuuid: "featured-sjfl" },
+    { name: "RNZ National", country: "New Zealand", tags: "news, culture", votes: 3300, geo_lat: -41.2865, geo_long: 174.7762, url_resolved: "https://radionz-ice.streamguys1.com/national.mp3", stationuuid: "featured-rnz" },
+    { name: "Radio 702", country: "South Africa", tags: "news, talk", votes: 3500, geo_lat: -26.2041, geo_long: 28.0473, url_resolved: "https://edge.iono.fm/xice/29_medium.aac", stationuuid: "featured-702" },
+    { name: "Radio Wave", country: "Czech Republic", tags: "alternative, culture", votes: 2800, geo_lat: 50.0755, geo_long: 14.4378, url_resolved: "https://icecast8.play.cz/cro2-128.mp3", stationuuid: "featured-wave" },
+    { name: "Virgin Radio Dubai", country: "United Arab Emirates", tags: "pop, hits", votes: 3000, geo_lat: 25.2048, geo_long: 55.2708, url_resolved: "https://playerservices.streamtheworld.com/api/livestream-redirect/VIRGIN_RADIOMP3_SC", stationuuid: "featured-virgin-dubai" }
+];
+
+const MAP_STYLE_CONFIG = {
+    dark: {
+        name: 'Neon Dark',
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        options: {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19,
+            detectRetina: true
+        }
+    },
+    light: {
+        name: 'Clean Light',
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        options: {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19,
+            detectRetina: true
+        }
+    },
+    terrain: {
+        name: 'Terrain',
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        options: {
+            attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap',
+            maxZoom: 17,
+            detectRetina: true
+        }
+    },
+    satellite: {
+        name: 'Satellite',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        options: {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye',
+            maxZoom: 18
+        }
+    }
+};
+
+const REGION_PRESETS = {
+    world: { center: [20, 0], zoom: 2 },
+    americas: { bounds: [[-55, -170], [72, -30]] },
+    europe: { bounds: [[34, -12], [71, 40]] },
+    asia: { bounds: [[-5, 60], [60, 150]] },
+    africa: { bounds: [[-35, -20], [38, 55]] },
+    oceania: { bounds: [[-50, 110], [10, 180]] }
+};
 
 // Demo stations fallback (if API is unavailable)
 function getDemoStations() {
-    return [
-        {name:"BBC Radio 1",country:"United Kingdom",tags:"pop, music",votes:5000,geo_lat:51.5074,geo_long:-0.1278,url_resolved:"http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one",stationuuid:"demo-bbc1"},
-        {name:"NPR News",country:"USA",tags:"news, talk",votes:4500,geo_lat:38.8951,geo_long:-77.0364,url_resolved:"http://npr-ice.streamguys1.com/live.mp3",stationuuid:"demo-npr"},
-        {name:"France Inter",country:"France",tags:"news, talk, culture",votes:4000,geo_lat:48.8566,geo_long:2.3522,url_resolved:"http://direct.franceinter.fr/live/franceinter-midfi.mp3",stationuuid:"demo-france"},
-        {name:"Deutschlandfunk",country:"Germany",tags:"news, culture",votes:3800,geo_lat:52.5200,geo_long:13.4050,url_resolved:"http://st01.dlf.de/dlf/01/128/mp3/stream.mp3",stationuuid:"demo-dlf"},
-        {name:"Radio Nacional",country:"Argentina",tags:"news, music",votes:3500,geo_lat:-34.6037,geo_long:-58.3816,url_resolved:"http://sa.mp3.icecast.magma.edge-access.net:7200/sc_rad1",stationuuid:"demo-argentina"},
-        {name:"ABC Classic FM",country:"Australia",tags:"classical",votes:3200,geo_lat:-33.8688,geo_long:151.2093,url_resolved:"http://live-radio01.mediahubaustralia.com/2FCW/mp3/",stationuuid:"demo-abc"},
-        {name:"NHK Radio Japan",country:"Japan",tags:"news, culture",votes:3000,geo_lat:35.6762,geo_long:139.6503,url_resolved:"http://nhkradioakr-i.akamaihd.net/hls/live/511633/1-r1/1-r1-01.m3u8",stationuuid:"demo-nhk"},
-        {name:"CBC Radio One",country:"Canada",tags:"news, talk",votes:2800,geo_lat:45.4215,geo_long:-75.6972,url_resolved:"http://cbcliveradio-lh.akamaihd.net/i/CBCR1_MTL@382863/master.m3u8",stationuuid:"demo-cbc"},
-        {name:"RTÉ Radio 1",country:"Ireland",tags:"news, talk",votes:2500,geo_lat:53.3498,geo_long:-6.2603,url_resolved:"http://icecast1.rte.ie/radio1",stationuuid:"demo-rte"},
-        {name:"Radio España",country:"Spain",tags:"music, pop",votes:2300,geo_lat:40.4168,geo_long:-3.7038,url_resolved:"http://listen.011fm.com/stream28",stationuuid:"demo-spain"},
-        {name:"Radio Moscow",country:"Russia",tags:"news, talk",votes:2200,geo_lat:55.7558,geo_long:37.6173,url_resolved:"http://icecast-studio21.cdnvideo.ru/radio21_96kbps",stationuuid:"demo-moscow"},
-        {name:"All India Radio",country:"India",tags:"news, music",votes:2000,geo_lat:28.6139,geo_long:77.2090,url_resolved:"http://air.pc.cdn.bitgravity.com/air/live/pbaudio134/playlist.m3u8",stationuuid:"demo-india"},
-        {name:"Radio China",country:"China",tags:"news, culture",votes:1900,geo_lat:39.9042,geo_long:116.4074,url_resolved:"http://sk.cri.cn/am846.m3u8",stationuuid:"demo-china"},
-        {name:"Radio Cairo",country:"Egypt",tags:"news, music",votes:1800,geo_lat:30.0444,geo_long:31.2357,url_resolved:"http://livestreaming2.onlinehorizons.net/Shaabi",stationuuid:"demo-egypt"},
-        {name:"Radio Brasil",country:"Brazil",tags:"music, samba",votes:1700,geo_lat:-23.5505,geo_long:-46.6333,url_resolved:"http://8903.brasilstream.com.br:8903/stream",stationuuid:"demo-brazil"},
-        {name:"Radio South Africa",country:"South Africa",tags:"news, music",votes:1600,geo_lat:-33.9249,geo_long:18.4241,url_resolved:"http://41445.live.streamtheworld.com/METRO_FM_SC",stationuuid:"demo-sa"},
-        {name:"Radio Mexico",country:"Mexico",tags:"music, latin",votes:1500,geo_lat:19.4326,geo_long:-99.1332,url_resolved:"http://playerservices.streamtheworld.com/api/livestream-redirect/XHFMFMAAC.aac",stationuuid:"demo-mexico"},
-        {name:"Radio Italia",country:"Italy",tags:"music, pop",votes:1400,geo_lat:41.9028,geo_long:12.4964,url_resolved:"http://icecast.unitedradio.it/RID.mp3",stationuuid:"demo-italy"},
-        {name:"Radio Amsterdam",country:"Netherlands",tags:"music, dance",votes:1300,geo_lat:52.3676,geo_long:4.9041,url_resolved:"http://icecast-qmusicnl-cdp.triple-it.nl/Qmusic_nl_live.mp3",stationuuid:"demo-nl"},
-        {name:"Radio Sweden",country:"Sweden",tags:"pop, music",votes:1200,geo_lat:59.3293,geo_long:18.0686,url_resolved:"http://sverigesradio.se/topsy/direkt/164-hi-mp3.m3u",stationuuid:"demo-sweden"}
-    ];
+    return FEATURED_STATIONS.slice(0, 35);
 }
 
 const audioPlayer = document.getElementById('audioPlayer');
@@ -43,6 +118,13 @@ const loading = document.getElementById('loading');
 const stationList = document.getElementById('stationList');
 const searchInput = document.getElementById('searchInput');
 const visualizer = document.getElementById('musicVisualizer');
+const featuredGrid = document.getElementById('featuredGrid');
+const shuffleFeaturedBtn = document.getElementById('shuffleFeatured');
+const filterStatus = document.getElementById('filterStatus');
+const filterChipsContainer = document.getElementById('filterChips');
+const clearFiltersBtn = document.getElementById('clearFilters');
+const mapStyleControls = document.getElementById('mapStyleControls');
+const regionControls = document.getElementById('regionControls');
 
 // Set initial volume
 audioPlayer.volume = 0.7;
@@ -117,18 +199,29 @@ function createFloatingParticles() {
     }
 }
 
-createFloatingParticles();
+function ensureVisualizerReady() {
+    if (!visualizerReady) {
+        createFloatingParticles();
+        visualizerReady = true;
+    }
+}
 
 // Initialize map
 function initMap() {
-    map = L.map('map').setView([20, 0], 2);
-    
-    // Add tile layer with dark theme
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        subdomains: 'abcd',
-        maxZoom: 19
-    }).addTo(map);
+    const defaultView = REGION_PRESETS.world;
+    map = L.map('map', {
+        worldCopyJump: true,
+        preferCanvas: true,
+        zoomSnap: 0.5
+    }).setView(defaultView.center, defaultView.zoom);
+
+    baseLayers = {};
+    Object.entries(MAP_STYLE_CONFIG).forEach(([key, config]) => {
+        baseLayers[key] = L.tileLayer(config.url, config.options);
+    });
+    baseLayers[activeBaseLayerKey].addTo(map);
+    map.zoomControl.setPosition('bottomright');
+    L.control.scale({ position: 'bottomright', maxWidth: 120 }).addTo(map);
 
     // Initialize marker cluster group
     markerClusterGroup = L.markerClusterGroup({
@@ -158,6 +251,38 @@ function initMap() {
     });
     
     map.addLayer(markerClusterGroup);
+}
+
+function switchBaseLayer(styleKey) {
+    if (!map || !baseLayers[styleKey] || styleKey === activeBaseLayerKey) return;
+    baseLayers[activeBaseLayerKey].removeFrom(map);
+    baseLayers[styleKey].addTo(map);
+    activeBaseLayerKey = styleKey;
+}
+
+function setActiveMapStyleButton(styleKey) {
+    if (!mapStyleControls) return;
+    mapStyleControls.querySelectorAll('.pill').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mapStyle === styleKey);
+    });
+}
+
+function setActiveRegionButton(regionKey) {
+    if (!regionControls) return;
+    regionControls.querySelectorAll('.pill').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.region === regionKey);
+    });
+}
+
+function zoomToRegion(regionKey) {
+    if (!map) return;
+    const preset = REGION_PRESETS[regionKey];
+    if (!preset) return;
+    if (preset.bounds) {
+        map.fitBounds(preset.bounds, { padding: [40, 40] });
+    } else if (preset.center) {
+        map.flyTo(preset.center, preset.zoom || 3, { duration: 1.1 });
+    }
 }
 
 // IndexedDB caching
@@ -227,8 +352,10 @@ async function cacheStations(stations) {
 
 // Fetch radio stations from Radio Browser API with caching
 async function fetchStations() {
-    loading.classList.add('active');
-    loading.innerHTML = '<div class="spinner"></div>Checking cache...';
+    if (loading) {
+        loading.classList.add('active');
+        loading.innerHTML = '<div class="spinner"></div>Checking local cache...';
+    }
     
     try {
         // Try to load from cache first
@@ -237,14 +364,12 @@ async function fetchStations() {
         if (cached && cached.length > 0) {
             console.log(`✅ Loaded ${cached.length} stations from cache`);
             allStations = cached;
+            filteredStations = allStations;
             stations = allStations;
-            
-            // Quick display - show initial batch immediately
-            loading.innerHTML = '<div class="spinner"></div>Loading from cache...';
-            displayInitialStations();
-            displayStationsInSidebar(stations.slice(0, 200));
+            await applyQuickFilter(activeFilterKey || 'all');
             updateStats();
-            loading.classList.remove('active');
+            updateFilterStatus(`${cached.length.toLocaleString()} stations loaded from cache. Checking for fresh updates...`);
+            if (loading) loading.classList.remove('active');
             
             // Fetch fresh data in background
             fetchStationsInBackground();
@@ -253,17 +378,21 @@ async function fetchStations() {
         
         // No cache - fetch from API
         console.log('No cache found. Fetching from API...');
-        loading.innerHTML = '<div class="spinner"></div>Loading stations from internet...';
+        if (loading) {
+            loading.innerHTML = '<div class="spinner"></div>Loading live stations...';
+        }
         await fetchStationsFromAPI();
         
     } catch (error) {
         console.error('Error loading stations:', error);
-        loading.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <div class="spinner"></div>
-                <div style="margin-top: 10px;">Connection error. Retrying...</div>
-            </div>
-        `;
+        if (loading) {
+            loading.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 10px;">Connection error. Retrying...</div>
+                </div>
+            `;
+        }
         setTimeout(() => fetchStationsFromAPI(), 2000);
     }
 }
@@ -280,7 +409,9 @@ async function fetchStationsFromAPI() {
     // Try each API one by one until one works
     for (let i = 0; i < apis.length; i++) {
         try {
-            loading.innerHTML = `<div class="spinner"></div>Loading from server ${i + 1}/${apis.length}...`;
+            if (loading) {
+                loading.innerHTML = `<div class="spinner"></div>Loading from server ${i + 1}/${apis.length}...`;
+            }
             console.log(`Trying API ${i + 1}: ${apis[i]}`);
             
             const controller = new AbortController();
@@ -312,17 +443,14 @@ async function fetchStationsFromAPI() {
                 Math.abs(station.geo_long) <= 180
             );
             
-            stations = allStations;
+            filteredStations = allStations;
             console.log(`${allStations.length} valid stations with coordinates`);
             
-            // Cache for next time
             cacheStations(allStations);
-            
-            // Display quickly
-            displayInitialStations();
-            displayStationsInSidebar(stations.slice(0, 200));
+            await applyQuickFilter(activeFilterKey || 'all');
             updateStats();
-            loading.classList.remove('active');
+            updateFilterStatus(`${allStations.length.toLocaleString()} live stations ready to explore.`);
+            if (loading) loading.classList.remove('active');
             return; // Success!
             
         } catch (error) {
@@ -335,6 +463,7 @@ async function fetchStationsFromAPI() {
                 
                 // Load minimal demo stations
                 allStations = getDemoStations();
+                filteredStations = allStations;
                 stations = allStations;
                 
                 loading.innerHTML = `
@@ -351,12 +480,13 @@ async function fetchStationsFromAPI() {
                 `;
                 
                 setTimeout(() => {
-                    displayInitialStations();
-                    displayStationsInSidebar(stations);
+                    displayInitialStations(allStations, { clearExisting: true, background: false });
+                    displayStationsInSidebar(allStations);
                     updateStats();
+                    updateFilterStatus('Showing curated stations while the API is offline.');
                     
                     setTimeout(() => {
-                        loading.classList.remove('active');
+                        if (loading) loading.classList.remove('active');
                     }, 2000);
                 }, 1000);
                 
@@ -397,174 +527,89 @@ async function fetchStationsInBackground() {
     }
 }
 
-// Display initial stations quickly (only 1000 on map initially)
-function displayInitialStations() {
-    const initialBatch = stations.slice(0, 1000);
-    const markers = [];
-    
-    initialBatch.forEach(station => {
-        const marker = L.circleMarker([station.geo_lat, station.geo_long], {
-            radius: 8,
-            fillColor: '#00d4ff',
-            color: '#fff',
-            weight: 3,
-            opacity: 1,
-            fillOpacity: 0.85
-        });
+function getPopupTemplate(station) {
+    const tagsLine = station.tags ? `<div class="popup-station-info">🏷️ ${escapeHtml(station.tags)}</div>` : '';
+    const votesLine = station.votes ? `<div class="popup-station-info">👥 Votes: ${station.votes}</div>` : '';
+    return `
+        <div class="popup-station-name">${escapeHtml(station.name)}</div>
+        <div class="popup-station-info">📍 ${escapeHtml(station.country || 'Unknown')}</div>
+        ${tagsLine}
+        ${votesLine}
+        <button class="popup-play-btn" onclick="playStationById('${station.stationuuid}')">▶️ Play Station</button>
+    `;
+}
 
-        const popupContent = `
-            <div class="popup-station-name">${escapeHtml(station.name)}</div>
-            <div class="popup-station-info">📍 ${escapeHtml(station.country || 'Unknown')}</div>
-            <div class="popup-station-info">🏷️ ${escapeHtml(station.tags || 'No tags')}</div>
-            <div class="popup-station-info">👥 Votes: ${station.votes || 0}</div>
-            <button class="popup-play-btn" onclick="playStationById('${station.stationuuid}')">▶️ Play Station</button>
-        `;
-        
-        marker.bindPopup(popupContent, {
-            maxWidth: 250,
-            className: 'custom-popup'
-        });
-        
-        // Add hover effect
-        marker.on('mouseover', function() {
-            this.setStyle({
-                fillColor: '#0095ff',
-                fillOpacity: 1,
-                radius: 10
-            });
-        });
-        
-        marker.on('mouseout', function() {
-            this.setStyle({
-                fillColor: '#00d4ff',
-                fillOpacity: 0.85,
-                radius: 8
-            });
-        });
-        
-        markers.push(marker);
+function buildMarkerForStation(station) {
+    if (!station || typeof station.geo_lat !== 'number' || typeof station.geo_long !== 'number') {
+        return null;
+    }
+    const marker = L.circleMarker([station.geo_lat, station.geo_long], {
+        radius: 8,
+        fillColor: '#00d4ff',
+        color: '#fff',
+        weight: 3,
+        opacity: 1,
+        fillOpacity: 0.85
     });
-    
-    markerClusterGroup.addLayers(markers);
-    
-    // Load remaining stations in background
-    if (stations.length > 1000) {
-        setTimeout(() => loadRemainingStations(1000), 500);
+
+    marker.bindPopup(getPopupTemplate(station), {
+        maxWidth: 250,
+        className: 'custom-popup'
+    });
+
+    marker.on('mouseover', function() {
+        this.setStyle({
+            fillColor: '#0095ff',
+            fillOpacity: 1,
+            radius: 10
+        });
+    });
+
+    marker.on('mouseout', function() {
+        this.setStyle({
+            fillColor: '#00d4ff',
+            fillOpacity: 0.85,
+            radius: 8
+        });
+    });
+
+    return marker;
+}
+
+function displayInitialStations(sourceStations = stations, options = {}) {
+    if (!sourceStations || sourceStations.length === 0) return;
+    const { clearExisting = false, background = true } = options;
+    if (clearExisting) {
+        markerLoadSequence += 1;
+        markerClusterGroup.clearLayers();
+        markers = [];
+    }
+    const token = markerLoadSequence;
+
+    const batch = sourceStations.slice(0, 1000).map(buildMarkerForStation).filter(Boolean);
+    if (!batch.length) return;
+
+    markerClusterGroup.addLayers(batch);
+    markers = markers.concat(batch);
+
+    if (background && sourceStations.length > 1000) {
+        setTimeout(() => loadRemainingStations(1000, sourceStations, token), 400);
     }
 }
 
-// Load remaining stations in background
-function loadRemainingStations(startIndex) {
+function loadRemainingStations(startIndex, sourceStations = stations, token = markerLoadSequence) {
+    if (token !== markerLoadSequence) return;
     const batchSize = 2000;
-    const batch = stations.slice(startIndex, startIndex + batchSize);
-    
-    if (batch.length === 0) return;
-    
-    const markers = [];
-    batch.forEach(station => {
-        const marker = L.circleMarker([station.geo_lat, station.geo_long], {
-            radius: 8,
-            fillColor: '#00d4ff',
-            color: '#fff',
-            weight: 3,
-            opacity: 1,
-            fillOpacity: 0.85
-        });
+    const batch = sourceStations.slice(startIndex, startIndex + batchSize).map(buildMarkerForStation).filter(Boolean);
+    if (!batch.length) return;
+    markerClusterGroup.addLayers(batch);
+    markers = markers.concat(batch);
 
-        const popupContent = `
-            <div class="popup-station-name">${escapeHtml(station.name)}</div>
-            <div class="popup-station-info">📍 ${escapeHtml(station.country || 'Unknown')}</div>
-            <div class="popup-station-info">🏷️ ${escapeHtml(station.tags || 'No tags')}</div>
-            <button class="popup-play-btn" onclick="playStationById('${station.stationuuid}')">▶️ Play Station</button>
-        `;
-        
-        marker.bindPopup(popupContent, {
-            maxWidth: 250,
-            className: 'custom-popup'
-        });
-        
-        // Add hover effect
-        marker.on('mouseover', function() {
-            this.setStyle({
-                fillColor: '#0095ff',
-                fillOpacity: 1,
-                radius: 10
-            });
-        });
-        
-        marker.on('mouseout', function() {
-            this.setStyle({
-                fillColor: '#00d4ff',
-                fillOpacity: 0.85,
-                radius: 8
-            });
-        });
-        
-        markers.push(marker);
-    });
-    
-    markerClusterGroup.addLayers(markers);
-    
-    // Load next batch
-    if (startIndex + batchSize < stations.length) {
-        setTimeout(() => loadRemainingStations(startIndex + batchSize), 200);
+    if (startIndex + batchSize < sourceStations.length) {
+        setTimeout(() => loadRemainingStations(startIndex + batchSize, sourceStations, token), 200);
     }
 }
 
-// Display stations on map in batches using clustering
-async function displayStationsOnMapBatched() {
-    return new Promise((resolve) => {
-        const batchSize = 500;
-        let currentIndex = 0;
-        
-        function processBatch() {
-            const batch = stations.slice(currentIndex, currentIndex + batchSize);
-            const newMarkers = [];
-            
-            batch.forEach(station => {
-                const marker = L.circleMarker([station.geo_lat, station.geo_long], {
-                    radius: 6,
-                    fillColor: '#00d4ff',
-                    color: '#fff',
-                    weight: 2,
-                    opacity: 0.9,
-                    fillOpacity: 0.7
-                });
-
-                // Create popup
-                const popupContent = `
-                    <div class="popup-station-name">${escapeHtml(station.name)}</div>
-                    <div class="popup-station-info">📍 ${escapeHtml(station.country || 'Unknown')}</div>
-                    <div class="popup-station-info">🏷️ ${escapeHtml(station.tags || 'No tags')}</div>
-                    <div class="popup-station-info">👥 Votes: ${station.votes || 0}</div>
-                    <button class="popup-play-btn" onclick="playStationById('${station.stationuuid}')">▶️ Play</button>
-                `;
-                
-                marker.bindPopup(popupContent);
-                newMarkers.push(marker);
-            });
-            
-            // Add batch to cluster group
-            markerClusterGroup.addLayers(newMarkers);
-            markers = markers.concat(newMarkers);
-            
-            currentIndex += batchSize;
-            
-            // Update loading message
-            const progress = Math.min(100, Math.round((currentIndex / stations.length) * 100));
-            loading.innerHTML = `<div class="spinner"></div>Loading stations: ${progress}%`;
-            
-            if (currentIndex < stations.length) {
-                // Process next batch
-                setTimeout(processBatch, 50);
-            } else {
-                resolve();
-            }
-        }
-        
-        processBatch();
-    });
-}
 
 // Display stations in sidebar with virtual scrolling
 let currentDisplayIndex = 0;
@@ -573,6 +618,16 @@ const STATIONS_PER_PAGE = 50;
 function displayStationsInSidebar(stationsToDisplay) {
     stationList.innerHTML = '';
     currentDisplayIndex = 0;
+    if (!stationsToDisplay || stationsToDisplay.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'station-item';
+        empty.innerHTML = `
+            <div class="station-name">No stations found</div>
+            <div class="station-tags">Try a different search or reset your filters.</div>
+        `;
+        stationList.appendChild(empty);
+        return;
+    }
     
     const displayLimit = Math.min(stationsToDisplay.length, 200);
     
@@ -609,6 +664,212 @@ function displayStationsInSidebar(stationsToDisplay) {
     info.style.cssText = 'padding: 15px; text-align: center; color: #00d4ff; font-size: 13px;';
     info.textContent = `${stationsToDisplay.length.toLocaleString()} stations available. All are on the map!`;
     stationList.appendChild(info);
+}
+
+function renderFeaturedGrid(shuffle = false) {
+    if (!featuredGrid) return;
+    const pool = FEATURED_STATIONS.slice();
+    if (shuffle) {
+        pool.sort(() => Math.random() - 0.5);
+    }
+    const subset = pool.slice(0, 8);
+    featuredGrid.innerHTML = '';
+    subset.forEach(station => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'featured-card';
+        card.innerHTML = `
+            <h4>${escapeHtml(station.name)}</h4>
+            <span>${escapeHtml(station.country || 'Global')}</span>
+        `;
+        card.addEventListener('click', () => playStation(station));
+        featuredGrid.appendChild(card);
+    });
+}
+
+function setActiveFilterChip(filterKey) {
+    if (!filterChipsContainer) return;
+    filterChipsContainer.querySelectorAll('.chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === filterKey);
+    });
+}
+
+function updateFilterStatus(message) {
+    if (filterStatus) {
+        filterStatus.textContent = message;
+    }
+}
+
+async function applyQuickFilter(filterKey, options = {}) {
+    const { silent = false } = options;
+    const token = ++filterRequestToken;
+    const baseData = allStations && allStations.length ? allStations : FEATURED_STATIONS;
+    let result = baseData;
+    let statusMessage = `${baseData.length.toLocaleString()} stations loaded worldwide.`;
+
+    const normalizeTags = (station) => (station.tags || '').toLowerCase();
+
+    switch (filterKey) {
+        case 'top':
+            result = [...baseData].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 200);
+            statusMessage = `Top ${result.length} most voted stations.`;
+            break;
+        case 'music':
+            result = baseData.filter(station => /music|pop|rock|dance|soul|indie|alt/.test(normalizeTags(station)));
+            statusMessage = `${result.length.toLocaleString()} music-forward stations.`;
+            break;
+        case 'news':
+            result = baseData.filter(station => /news|politic|world|business|finance/.test(normalizeTags(station)));
+            statusMessage = `${result.length.toLocaleString()} live news and current affairs stations.`;
+            break;
+        case 'talk':
+            result = baseData.filter(station => /talk|culture|sports|podcast/.test(normalizeTags(station)));
+            statusMessage = `${result.length.toLocaleString()} talk, culture, and sports voices.`;
+            break;
+        case 'electronic':
+            result = baseData.filter(station => /electro|edm|house|techno|dance|club/.test(normalizeTags(station)));
+            statusMessage = `${result.length.toLocaleString()} electronic and club stations.`;
+            break;
+        case 'nearby': {
+            statusMessage = 'Locating you to show nearby stations...';
+            if (!silent) updateFilterStatus(statusMessage);
+            try {
+                const coords = await ensureUserLocation();
+                result = getNearbyStations(coords, 120, baseData);
+                statusMessage = result.length ? `Closest ${result.length} stations to you right now.` : 'No nearby stations yet. Showing global picks.';
+                if (map && coords) {
+                    map.flyTo(coords, 5, { duration: 1.2 });
+                }
+            } catch (error) {
+                console.warn('Location lookup failed:', error);
+                setActiveFilterChip('all');
+                activeFilterKey = 'all';
+                result = baseData;
+                statusMessage = 'Location blocked. Showing all stations instead.';
+            }
+            break;
+        }
+        default:
+            result = baseData;
+            statusMessage = `${result.length.toLocaleString()} stations across the globe.`;
+    }
+
+    if (token !== filterRequestToken) {
+        return result;
+    }
+
+    filteredStations = result;
+    stations = result;
+    displayStationsInSidebar(result);
+    updateMapMarkers(result);
+    if (!silent) {
+        updateFilterStatus(statusMessage);
+    }
+    return result;
+}
+
+function ensureUserLocation() {
+    if (userLocation) return Promise.resolve(userLocation);
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation not supported in this browser.'));
+            return;
+        }
+        navigator.geolocation.getCurrentPosition((position) => {
+            userLocation = [position.coords.latitude, position.coords.longitude];
+            resolve(userLocation);
+        }, (error) => {
+            reject(error);
+        }, {
+            enableHighAccuracy: false,
+            timeout: 8000,
+            maximumAge: 600000
+        });
+    });
+}
+
+function getNearbyStations(coords, limit = 100, dataset = allStations) {
+    if (!coords || !dataset) return [];
+    const [lat, lng] = coords;
+    return dataset
+        .filter(station => typeof station.geo_lat === 'number' && typeof station.geo_long === 'number')
+        .map(station => ({
+            station,
+            distance: haversineDistance(lat, lng, station.geo_lat, station.geo_long)
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit)
+        .map(item => item.station);
+}
+
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (deg) => deg * (Math.PI / 180);
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function primeFeaturedExperience() {
+    if (!FEATURED_STATIONS.length) return;
+    if (loading) {
+        loading.classList.add('active');
+        loading.innerHTML = '<div class="spinner"></div>Connecting to the live radio directory...';
+    }
+    allStations = FEATURED_STATIONS.slice();
+    filteredStations = allStations;
+    stations = allStations;
+    displayInitialStations(allStations, { clearExisting: true, background: false });
+    displayStationsInSidebar(allStations);
+    updateStats(true);
+    updateFilterStatus('Showing curated stations while we fetch the full live directory...');
+}
+
+function registerUIBindings() {
+    if (shuffleFeaturedBtn) {
+        shuffleFeaturedBtn.addEventListener('click', () => renderFeaturedGrid(true));
+    }
+    if (filterChipsContainer) {
+        filterChipsContainer.addEventListener('click', (event) => {
+            const chip = event.target.closest('.chip');
+            if (!chip) return;
+            const filterKey = chip.dataset.filter;
+            if (!filterKey || filterKey === activeFilterKey) return;
+            activeFilterKey = filterKey;
+            setActiveFilterChip(filterKey);
+            applyQuickFilter(filterKey);
+        });
+    }
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            activeFilterKey = 'all';
+            setActiveFilterChip('all');
+            applyQuickFilter('all');
+        });
+    }
+    if (mapStyleControls) {
+        setActiveMapStyleButton(activeBaseLayerKey);
+        mapStyleControls.addEventListener('click', (event) => {
+            const button = event.target.closest('.pill');
+            if (!button) return;
+            const styleKey = button.dataset.mapStyle;
+            if (!styleKey || styleKey === activeBaseLayerKey) return;
+            setActiveMapStyleButton(styleKey);
+            switchBaseLayer(styleKey);
+        });
+    }
+    if (regionControls) {
+        setActiveRegionButton('world');
+        regionControls.addEventListener('click', (event) => {
+            const button = event.target.closest('.pill');
+            if (!button) return;
+            const regionKey = button.dataset.region;
+            if (!regionKey) return;
+            setActiveRegionButton(regionKey);
+            zoomToRegion(regionKey);
+        });
+    }
 }
 
 function createStationListItem(station) {
@@ -669,6 +930,7 @@ function playStation(station) {
         playPauseBtn.textContent = '⏸️';
         
         // Activate music visualizer
+        ensureVisualizerReady();
         visualizer.classList.add('active');
     }).catch(error => {
         console.error('Error playing station:', error);
@@ -774,16 +1036,19 @@ let searchTimeout;
 function searchStations() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        const query = searchInput.value.toLowerCase().trim();
+        const searchLabel = searchInput.value.trim();
+        const query = searchLabel.toLowerCase().trim();
+        const baseCollection = (filteredStations && filteredStations.length) ? filteredStations : allStations;
         
         if (!query) {
-            stations = allStations;
-            displayStationsInSidebar(stations.slice(0, 200));
-            updateMapMarkers(allStations);
+            stations = baseCollection;
+            displayStationsInSidebar(baseCollection);
+            updateMapMarkers(baseCollection);
+            updateFilterStatus(`${baseCollection.length.toLocaleString()} stations with current filters.`);
             return;
         }
 
-        const filtered = allStations.filter(station => 
+        const filtered = baseCollection.filter(station => 
             station.name.toLowerCase().includes(query) ||
             (station.country && station.country.toLowerCase().includes(query)) ||
             (station.state && station.state.toLowerCase().includes(query)) ||
@@ -793,6 +1058,11 @@ function searchStations() {
         stations = filtered;
         displayStationsInSidebar(filtered);
         updateMapMarkers(filtered);
+        if (filtered.length) {
+            updateFilterStatus(`${filtered.length.toLocaleString()} matches for "${searchLabel}"`);
+        } else {
+            updateFilterStatus(`No stations matched "${searchLabel}". Try another keyword.`);
+        }
 
         // Zoom to show filtered stations
         if (filtered.length > 0 && filtered.length < 100) {
@@ -805,92 +1075,47 @@ function searchStations() {
 }
 
 function updateMapMarkers(stationsToShow) {
-    // Clear existing markers
-    markerClusterGroup.clearLayers();
-    markers = [];
-    
-    // Add new markers in batches
-    const batchSize = 500;
-    let index = 0;
-    
-    function addBatch() {
-        const batch = stationsToShow.slice(index, index + batchSize);
-        const newMarkers = [];
-        
-        batch.forEach(station => {
-            const marker = L.circleMarker([station.geo_lat, station.geo_long], {
-                radius: 8,
-                fillColor: '#00d4ff',
-                color: '#fff',
-                weight: 3,
-                opacity: 1,
-                fillOpacity: 0.85
-            });
-
-            const popupContent = `
-                <div class="popup-station-name">${escapeHtml(station.name)}</div>
-                <div class="popup-station-info">📍 ${escapeHtml(station.country || 'Unknown')}</div>
-                <div class="popup-station-info">🏷️ ${escapeHtml(station.tags || 'No tags')}</div>
-                <button class="popup-play-btn" onclick="playStationById('${station.stationuuid}')">▶️ Play Station</button>
-            `;
-            
-            marker.bindPopup(popupContent, {
-                maxWidth: 250,
-                className: 'custom-popup'
-            });
-            
-            // Add hover effect
-            marker.on('mouseover', function() {
-                this.setStyle({
-                    fillColor: '#0095ff',
-                    fillOpacity: 1,
-                    radius: 10
-                });
-            });
-            
-            marker.on('mouseout', function() {
-                this.setStyle({
-                    fillColor: '#00d4ff',
-                    fillOpacity: 0.85,
-                    radius: 8
-                });
-            });
-            
-            newMarkers.push(marker);
-        });
-        
-        markerClusterGroup.addLayers(newMarkers);
-        markers = markers.concat(newMarkers);
-        
-        index += batchSize;
-        
-        if (index < stationsToShow.length) {
-            setTimeout(addBatch, 50);
-        }
+    if (!stationsToShow || stationsToShow.length === 0) {
+        markerClusterGroup.clearLayers();
+        markers = [];
+        return;
     }
-    
-    addBatch();
+
+    const shouldBackgroundLoad = stationsToShow.length > 1000;
+    displayInitialStations(stationsToShow, {
+        clearExisting: true,
+        background: shouldBackgroundLoad
+    });
 }
 
 document.getElementById('searchBtn').addEventListener('click', searchStations);
 searchInput.addEventListener('input', searchStations);
 
 // Update stats
-function updateStats() {
-    const countries = [...new Set(allStations.map(s => s.country).filter(Boolean))];
+function updateStats(isPreview = false) {
+    const safeStations = allStations || [];
+    const countries = [...new Set(safeStations.map(s => s.country).filter(Boolean))];
     const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(2);
-    
-    document.getElementById('statsContent').innerHTML = `
-        Stations: ${allStations.length.toLocaleString()}<br>
-        Countries: ${countries.length}
-    `;
-    
-    document.getElementById('loadTime').textContent = `Loaded in ${loadTime}s`;
+    const statsNode = document.getElementById('statsContent');
+    const loadNode = document.getElementById('loadTime');
+    if (statsNode) {
+        statsNode.innerHTML = `
+            Stations: ${safeStations.length.toLocaleString()}<br>
+            Countries: ${countries.length}
+        `;
+    }
+    if (loadNode) {
+        loadNode.textContent = isPreview ? 'Warming up live data...' : `Loaded in ${loadTime}s`;
+    }
 }
 
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', () => {
     initMap();
+    registerUIBindings();
+    setActiveFilterChip(activeFilterKey);
+    renderFeaturedGrid();
+    primeFeaturedExperience();
     fetchStations();
     
     // Register service worker for offline support

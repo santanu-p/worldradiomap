@@ -70,6 +70,9 @@
     <!-- Preconnect to CDNs -->
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://basemaps.cartocdn.com" crossorigin>
+    <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://server.arcgisonline.com">
+    <link rel="preconnect" href="https://tile.opentopomap.org" crossorigin>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -281,6 +284,70 @@
             transform: rotate(-45deg) translateY(-10px);
         }
 
+        /* Map controls overlay */
+        .map-controls {
+            position: fixed;
+            top: 90px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 320px;
+            max-width: calc(100% - 40px);
+            z-index: 1001;
+            pointer-events: none;
+        }
+
+        .map-controls .control-card {
+            background: linear-gradient(135deg, rgba(10, 14, 39, 0.92) 0%, rgba(26, 31, 58, 0.92) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            border-radius: 18px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+            pointer-events: auto;
+            backdrop-filter: blur(12px);
+        }
+
+        .control-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #9ee9ff;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .pill-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pill {
+            border: 1px solid rgba(0, 212, 255, 0.35);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #d9f7ff;
+            font-size: 12px;
+            padding: 6px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.25s;
+        }
+
+        .pill:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .pill.active {
+            background: linear-gradient(135deg, #00d4ff 0%, #0095ff 100%);
+            color: #04122b;
+            border-color: transparent;
+            box-shadow: 0 6px 18px rgba(0, 212, 255, 0.35);
+        }
+
         /* Mobile Menu Overlay */
         .mobile-menu {
             position: fixed;
@@ -430,6 +497,111 @@
 
         .station-list {
             list-style: none;
+            margin-top: 10px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .section-header h3 {
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #9ee9ff;
+        }
+
+        .action-link {
+            background: none;
+            border: none;
+            color: #00d4ff;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0;
+        }
+
+        .action-link:hover {
+            color: #4df6ff;
+            text-decoration: underline;
+        }
+
+        .featured-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .featured-card {
+            border-radius: 14px;
+            padding: 12px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08) 0%, rgba(0, 149, 255, 0.08) 100%);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .featured-card:hover {
+            transform: translateY(-3px);
+            border-color: #00d4ff;
+            box-shadow: 0 10px 25px rgba(0, 212, 255, 0.25);
+        }
+
+        .featured-card h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+
+        .featured-card span {
+            display: block;
+            font-size: 12px;
+            color: #8fc8ff;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 999px;
+            background: transparent;
+            padding: 6px 14px;
+            font-size: 12px;
+            color: #d1edff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: #00d4ff;
+            color: #fff;
+        }
+
+        .chip.active {
+            background: linear-gradient(135deg, #00d4ff 0%, #0095ff 100%);
+            color: #03162d;
+            border-color: transparent;
+            box-shadow: 0 6px 16px rgba(0, 212, 255, 0.3);
+        }
+
+        .filter-status {
+            font-size: 12px;
+            color: #85bfff;
+            margin-top: 10px;
         }
 
         .station-item {
@@ -1042,6 +1214,10 @@
                 display: flex;
             }
 
+            .map-controls {
+                display: none;
+            }
+
             /* Hide search container on mobile, show in mobile menu */
             .search-container {
                 display: none;
@@ -1161,6 +1337,10 @@
             .mobile-menu {
                 display: none;
             }
+
+            .map-controls {
+                width: 280px;
+            }
         }
 
         /* Small Mobile Devices */
@@ -1248,6 +1428,18 @@
                 min-height: 44px;
             }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .music-visualizer,
+            .floating-particle,
+            .light-streak,
+            .pulse-ring,
+            .wave,
+            .rotating-circle {
+                animation: none !important;
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1267,6 +1459,30 @@
             <input type="text" id="searchInput" class="search-box" placeholder="Search country, city, or station...">
             <button id="searchBtn" class="btn">🔍 Search</button>
             <button id="toggleSidebar" class="btn">📻 Browse</button>
+        </div>
+    </div>
+
+    <!-- Map Controls -->
+    <div id="mapControls" class="map-controls">
+        <div class="control-card">
+            <div class="control-title">Map Style</div>
+            <div class="pill-group" id="mapStyleControls">
+                <button class="pill active" data-map-style="dark">Neon Dark</button>
+                <button class="pill" data-map-style="light">Clean Light</button>
+                <button class="pill" data-map-style="terrain">Terrain</button>
+                <button class="pill" data-map-style="satellite">Satellite</button>
+            </div>
+        </div>
+        <div class="control-card">
+            <div class="control-title">Jump to Region</div>
+            <div class="pill-group" id="regionControls">
+                <button class="pill active" data-region="world">World</button>
+                <button class="pill" data-region="americas">Americas</button>
+                <button class="pill" data-region="europe">Europe</button>
+                <button class="pill" data-region="asia">Asia</button>
+                <button class="pill" data-region="africa">Africa</button>
+                <button class="pill" data-region="oceania">Oceania</button>
+            </div>
         </div>
     </div>
 
@@ -1326,6 +1542,30 @@
     <div id="sidebar" class="sidebar">
         <button id="closeSidebar" class="sidebar-close">✕</button>
         <h2>Radio Stations</h2>
+        <div class="sidebar-section" id="featuredSection">
+            <div class="section-header">
+                <h3>Featured Channels</h3>
+                <button id="shuffleFeatured" class="action-link">Shuffle</button>
+            </div>
+            <div id="featuredGrid" class="featured-grid"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-header">
+                <h3>Filters &amp; Genres</h3>
+                <button id="clearFilters" class="action-link">Reset</button>
+            </div>
+            <div id="filterChips" class="chip-row">
+                <button class="chip active" data-filter="all">All Stations</button>
+                <button class="chip" data-filter="top">Top 100</button>
+                <button class="chip" data-filter="music">Music</button>
+                <button class="chip" data-filter="news">News</button>
+                <button class="chip" data-filter="talk">Talk</button>
+                <button class="chip" data-filter="electronic">Electronic</button>
+                <button class="chip" data-filter="nearby">Near Me</button>
+            </div>
+            <div id="filterStatus" class="filter-status">Showing featured stations while we load everything else...</div>
+        </div>
         <ul id="stationList" class="station-list"></ul>
     </div>
 
