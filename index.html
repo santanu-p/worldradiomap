@@ -146,6 +146,9 @@
             background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
             color: #fff;
             overflow: hidden;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overscroll-behavior: none;
         }
 
         #map {
@@ -296,6 +299,7 @@
             max-width: calc(100% - 40px);
             z-index: 1001;
             pointer-events: none;
+            transition: transform 0.35s ease, opacity 0.25s;
         }
 
         .map-controls .control-card {
@@ -306,6 +310,44 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
             pointer-events: auto;
             backdrop-filter: blur(12px);
+        }
+
+        .map-controls-toggle {
+            position: fixed;
+            bottom: 105px;
+            right: 18px;
+            padding: 12px 18px;
+            border-radius: 999px;
+            background: rgba(10, 14, 39, 0.92);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            color: #dff8ff;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+            display: none;
+            z-index: 1004;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+        }
+
+        .map-controls-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .map-controls-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
         }
 
         .control-title {
@@ -427,6 +469,7 @@
             backdrop-filter: blur(15px);
             z-index: 1002;
             padding: 20px;
+            padding-bottom: calc(200px + env(safe-area-inset-bottom, 0));
             overflow-y: auto;
             transition: right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             box-shadow: -8px 0 30px rgba(0, 0, 0, 0.6);
@@ -497,6 +540,7 @@
 
         .station-list {
             list-style: none;
+            padding-bottom: 140px;
             margin-top: 10px;
         }
 
@@ -683,7 +727,7 @@
             right: 0;
             background: linear-gradient(135deg, rgba(10, 14, 39, 0.98) 0%, rgba(26, 31, 58, 0.98) 100%);
             backdrop-filter: blur(15px);
-            padding: 25px 30px;
+            padding: 25px 30px calc(25px + env(safe-area-inset-bottom, 0));
             z-index: 1000;
             box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
             border-top: 2px solid rgba(0, 212, 255, 0.3);
@@ -1215,7 +1259,34 @@
             }
 
             .map-controls {
-                display: none;
+                top: auto;
+                left: 10px;
+                right: 10px;
+                bottom: calc(110px + env(safe-area-inset-bottom, 0));
+                width: auto;
+                max-width: none;
+                pointer-events: auto;
+                transform: translateY(calc(100% + 40px));
+                opacity: 0;
+                gap: 10px;
+                max-height: 55vh;
+                overflow-y: auto;
+                padding-bottom: env(safe-area-inset-bottom, 0);
+            }
+
+            .map-controls.open {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            .map-controls .pill-group {
+                row-gap: 10px;
+            }
+
+            .map-controls-toggle {
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
 
             /* Hide search container on mobile, show in mobile menu */
@@ -1253,7 +1324,7 @@
             }
 
             .player {
-                padding: 15px;
+                padding: 18px 18px calc(22px + env(safe-area-inset-bottom, 0));
                 position: fixed;
                 bottom: 0;
                 z-index: 1003;
@@ -1485,6 +1556,11 @@
             </div>
         </div>
     </div>
+
+    <button id="mapControlsToggle" class="map-controls-toggle" aria-expanded="false" aria-controls="mapControls">
+        ⚙️ Map Options
+    </button>
+    <div id="mapControlsOverlay" class="map-controls-overlay"></div>
 
     <!-- Mobile Menu Overlay -->
     <div id="mobileMenuOverlay" class="mobile-menu-overlay"></div>

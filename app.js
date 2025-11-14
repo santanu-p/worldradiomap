@@ -125,6 +125,9 @@ const filterChipsContainer = document.getElementById('filterChips');
 const clearFiltersBtn = document.getElementById('clearFilters');
 const mapStyleControls = document.getElementById('mapStyleControls');
 const regionControls = document.getElementById('regionControls');
+const mapControlsContainer = document.getElementById('mapControls');
+const mapControlsToggle = document.getElementById('mapControlsToggle');
+const mapControlsOverlay = document.getElementById('mapControlsOverlay');
 
 // Set initial volume
 audioPlayer.volume = 0.7;
@@ -283,6 +286,28 @@ function zoomToRegion(regionKey) {
     } else if (preset.center) {
         map.flyTo(preset.center, preset.zoom || 3, { duration: 1.1 });
     }
+}
+
+function isMobileViewport() {
+    return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function setMapPanelVisibility(forceOpen) {
+    if (!mapControlsContainer) return;
+    const shouldOpen = typeof forceOpen === 'boolean'
+        ? forceOpen
+        : !mapControlsContainer.classList.contains('open');
+    mapControlsContainer.classList.toggle('open', shouldOpen);
+    if (mapControlsToggle) {
+        mapControlsToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+    if (mapControlsOverlay) {
+        mapControlsOverlay.classList.toggle('active', shouldOpen);
+    }
+}
+
+function closeMobileMapPanel() {
+    setMapPanelVisibility(false);
 }
 
 // IndexedDB caching
@@ -857,6 +882,7 @@ function registerUIBindings() {
             if (!styleKey || styleKey === activeBaseLayerKey) return;
             setActiveMapStyleButton(styleKey);
             switchBaseLayer(styleKey);
+            if (isMobileViewport()) closeMobileMapPanel();
         });
     }
     if (regionControls) {
@@ -868,8 +894,20 @@ function registerUIBindings() {
             if (!regionKey) return;
             setActiveRegionButton(regionKey);
             zoomToRegion(regionKey);
+            if (isMobileViewport()) closeMobileMapPanel();
         });
     }
+    if (mapControlsToggle) {
+        mapControlsToggle.addEventListener('click', () => setMapPanelVisibility());
+    }
+    if (mapControlsOverlay) {
+        mapControlsOverlay.addEventListener('click', closeMobileMapPanel);
+    }
+    window.addEventListener('resize', () => {
+        if (!isMobileViewport()) {
+            closeMobileMapPanel();
+        }
+    });
 }
 
 function createStationListItem(station) {
