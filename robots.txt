@@ -1,25 +1,113 @@
 # World Radio Map - Robots.txt
+# https://worldradiomap.vercel.app/
+
+# Allow all search engine bots to crawl the site
 User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
+Disallow: /*.json$
 
-# Crawl-delay for polite bots
+# Crawl-delay for polite bots (optional, most major bots ignore this)
 Crawl-delay: 1
 
-# Sitemaps
-Sitemap: https://worldradiomap.vercel.app/sitemap.xml
-
-# Allow Google and Bing to crawl everything
+# Google Bot - Full access
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0
 
-User-agent: Bingbot
+User-agent: Googlebot-Image
 Allow: /
 
-# Block bad bots
+User-agent: Googlebot-News
+Allow: /
+
+# Bing Bot - Full access
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: MSNBot
+Allow: /
+
+# Yahoo/DuckDuckGo/Others
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# Social Media Bots - Allow for rich previews
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Pinterest
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
+# Block known bad/aggressive bots
 User-agent: AhrefsBot
 Disallow: /
 
 User-agent: SemrushBot
 Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: MegaIndex
+Disallow: /
+
+User-agent: AspiegelBot
+Disallow: /
+
+# AI Training Bots - Block (optional)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+# Sitemap locations
+Sitemap: https://worldradiomap.vercel.app/sitemap.xml
+
+# Host directive (for Yandex)
+Host: https://worldradiomap.vercel.app
