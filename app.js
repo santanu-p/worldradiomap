@@ -15,6 +15,16 @@ let userLocation = null;
 let visualizerReady = false;
 let markerLoadSequence = 0;
 let filterRequestToken = 0;
+let isMobile = false;
+let isLowPowerMode = false;
+
+// Detect mobile and low power mode
+function detectDeviceCapabilities() {
+    isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    // Check for low memory or slow device
+    isLowPowerMode = isMobile || (navigator.deviceMemory && navigator.deviceMemory < 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4);
+}
+detectDeviceCapabilities();
 const ATMOS_STORAGE_KEY = 'wrm-atmos-enabled';
 const supportsSpatialAudio = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
 const atmosEngine = {
@@ -149,74 +159,69 @@ const atmosStatusLabel = document.getElementById('atmosStatus');
 audioPlayer.crossOrigin = 'anonymous';
 audioPlayer.volume = 0.7;
 
-// Create cool fast visualizer effects
+// Create optimized visualizer effects - lighter on mobile
 function createFloatingParticles() {
     visualizer.innerHTML = ''; // Clear existing
     
+    // Skip heavy effects on mobile/low-power devices
+    if (isLowPowerMode) {
+        // Minimal visualizer for mobile - just 2 pulse rings
+        for (let i = 0; i < 2; i++) {
+            const ring = document.createElement('div');
+            ring.className = 'pulse-ring';
+            ring.style.animationDelay = (i * 0.8) + 's';
+            visualizer.appendChild(ring);
+        }
+        return;
+    }
+    
     const colors = ['#00d4ff', '#0095ff', '#00ffcc', '#0080ff', '#00b8e6', '#00e5ff'];
     
-    // Fast floating particles (30 particles)
-    for (let i = 0; i < 30; i++) {
+    // Reduced floating particles (10 instead of 30)
+    const particleCount = 10;
+    for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'floating-particle';
         
-        const size = Math.random() * 40 + 10;
+        const size = Math.random() * 30 + 10;
         const color = colors[Math.floor(Math.random() * colors.length)];
         const left = Math.random() * 100;
         const top = Math.random() * 100;
         const delay = Math.random() * 4;
-        const tx = (Math.random() - 0.5) * 200;
-        const ty = (Math.random() - 0.5) * 200;
+        const tx = (Math.random() - 0.5) * 150;
+        const ty = (Math.random() - 0.5) * 150;
         
-        particle.style.width = size + 'px';
-        particle.style.height = size + 'px';
-        particle.style.background = `radial-gradient(circle, ${color}, transparent)`;
-        particle.style.left = left + '%';
-        particle.style.top = top + '%';
-        particle.style.animationDelay = delay + 's';
-        particle.style.setProperty('--tx', tx + 'px');
-        particle.style.setProperty('--ty', ty + 'px');
-        particle.style.color = color;
+        particle.style.cssText = `width:${size}px;height:${size}px;background:radial-gradient(circle,${color},transparent);left:${left}%;top:${top}%;animation-delay:${delay}s;--tx:${tx}px;--ty:${ty}px;color:${color}`;
         
         visualizer.appendChild(particle);
     }
     
-    // Fast pulse rings (5 rings)
-    for (let i = 0; i < 5; i++) {
+    // Reduced pulse rings (3 instead of 5)
+    for (let i = 0; i < 3; i++) {
         const ring = document.createElement('div');
         ring.className = 'pulse-ring';
-        ring.style.animationDelay = (i * 0.3) + 's';
+        ring.style.animationDelay = (i * 0.5) + 's';
         visualizer.appendChild(ring);
     }
     
-    // Light streaks (15 streaks)
-    for (let i = 0; i < 15; i++) {
+    // Reduced light streaks (5 instead of 15)
+    for (let i = 0; i < 5; i++) {
         const streak = document.createElement('div');
         streak.className = 'light-streak';
-        streak.style.left = Math.random() * 100 + '%';
-        streak.style.animationDelay = Math.random() * 2 + 's';
-        streak.style.setProperty('--rotation', (Math.random() * 30 - 15) + 'deg');
+        streak.style.cssText = `left:${Math.random() * 100}%;animation-delay:${Math.random() * 2}s;--rotation:${(Math.random() * 30 - 15)}deg`;
         visualizer.appendChild(streak);
     }
     
-    // Energy waves (3 layers)
-    for (let i = 0; i < 3; i++) {
-        const wave = document.createElement('div');
-        wave.className = 'wave';
-        wave.style.animationDelay = (i * 1) + 's';
-        wave.style.opacity = 0.3 - (i * 0.1);
-        visualizer.appendChild(wave);
-    }
+    // Energy waves (1 layer only - was 3)
+    const wave = document.createElement('div');
+    wave.className = 'wave';
+    visualizer.appendChild(wave);
     
-    // Rotating circles (3 circles)
-    for (let i = 0; i < 3; i++) {
-        const circle = document.createElement('div');
-        circle.className = 'rotating-circle';
-        circle.style.animationDelay = (i * 2.6) + 's';
-        circle.style.width = (200 + i * 100) + 'px';
-        circle.style.height = (200 + i * 100) + 'px';
-        visualizer.appendChild(circle);
-    }
+    // Rotating circles (1 circle only - was 3)
+    const circle = document.createElement('div');
+    circle.className = 'rotating-circle';
+    circle.style.cssText = 'width:200px;height:200px';
+    visualizer.appendChild(circle);
 }
 
 function ensureVisualizerReady() {
@@ -226,13 +231,21 @@ function ensureVisualizerReady() {
     }
 }
 
-// Initialize map
+// Initialize map with mobile optimizations
 function initMap() {
     const defaultView = REGION_PRESETS.world;
     map = L.map('map', {
         worldCopyJump: true,
         preferCanvas: true,
-        zoomSnap: 0.5
+        zoomSnap: isMobile ? 1 : 0.5,
+        // Mobile optimizations
+        tap: isMobile,
+        touchZoom: true,
+        bounceAtZoomLimits: false,
+        // Disable animations on mobile for smoother feel
+        fadeAnimation: !isMobile,
+        zoomAnimation: !isMobile,
+        markerZoomAnimation: !isMobile
     }).setView(defaultView.center, defaultView.zoom);
 
     baseLayers = {};
@@ -241,21 +254,23 @@ function initMap() {
     });
     baseLayers[activeBaseLayerKey].addTo(map);
     map.zoomControl.setPosition('bottomright');
-    L.control.scale({ position: 'bottomright', maxWidth: 120 }).addTo(map);
+    if (!isMobile) {
+        L.control.scale({ position: 'bottomright', maxWidth: 120 }).addTo(map);
+    }
 
-    // Initialize marker cluster group
+    // Initialize marker cluster group with mobile optimizations
     markerClusterGroup = L.markerClusterGroup({
         chunkedLoading: true,
-        chunkInterval: 100,
-        chunkDelay: 30,
-        maxClusterRadius: 50,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: true,
+        chunkInterval: isMobile ? 200 : 100,
+        chunkDelay: isMobile ? 80 : 30,
+        maxClusterRadius: isMobile ? 80 : 50,
+        spiderfyOnMaxZoom: !isMobile,
+        showCoverageOnHover: !isMobile,
         zoomToBoundsOnClick: true,
-        removeOutsideVisibleBounds: false,
-        animate: true,
+        removeOutsideVisibleBounds: true,
+        animate: !isMobile,
         animateAddingMarkers: false,
-        disableClusteringAtZoom: 12,
+        disableClusteringAtZoom: isMobile ? 10 : 12,
         iconCreateFunction: function(cluster) {
             const count = cluster.getChildCount();
             let size = 'small';
@@ -265,7 +280,7 @@ function initMap() {
             return L.divIcon({
                 html: '<div><span>' + count + '</span></div>',
                 className: 'marker-cluster marker-cluster-' + size,
-                iconSize: L.point(48, 48)
+                iconSize: L.point(40, 40)
             });
         }
     });
@@ -771,27 +786,43 @@ function displayInitialStations(sourceStations = stations, options = {}) {
     }
     const token = markerLoadSequence;
 
-    const batch = sourceStations.slice(0, 1000).map(buildMarkerForStation).filter(Boolean);
+    // Reduce initial batch size on mobile
+    const initialBatchSize = isMobile ? 300 : 1000;
+    const batch = sourceStations.slice(0, initialBatchSize).map(buildMarkerForStation).filter(Boolean);
     if (!batch.length) return;
 
     markerClusterGroup.addLayers(batch);
     markers = markers.concat(batch);
 
-    if (background && sourceStations.length > 1000) {
-        setTimeout(() => loadRemainingStations(1000, sourceStations, token), 400);
+    if (background && sourceStations.length > initialBatchSize) {
+        // Longer delay on mobile for smoother experience
+        const delay = isMobile ? 800 : 400;
+        setTimeout(() => loadRemainingStations(initialBatchSize, sourceStations, token), delay);
     }
 }
 
 function loadRemainingStations(startIndex, sourceStations = stations, token = markerLoadSequence) {
     if (token !== markerLoadSequence) return;
-    const batchSize = 2000;
+    // Smaller batches on mobile to prevent jank
+    const batchSize = isMobile ? 500 : 2000;
     const batch = sourceStations.slice(startIndex, startIndex + batchSize).map(buildMarkerForStation).filter(Boolean);
     if (!batch.length) return;
-    markerClusterGroup.addLayers(batch);
-    markers = markers.concat(batch);
+    
+    // Use requestIdleCallback on supported browsers for smoother loading
+    const addBatch = () => {
+        markerClusterGroup.addLayers(batch);
+        markers = markers.concat(batch);
 
-    if (startIndex + batchSize < sourceStations.length) {
-        setTimeout(() => loadRemainingStations(startIndex + batchSize, sourceStations, token), 200);
+        if (startIndex + batchSize < sourceStations.length) {
+            const delay = isMobile ? 500 : 200;
+            setTimeout(() => loadRemainingStations(startIndex + batchSize, sourceStations, token), delay);
+        }
+    };
+    
+    if ('requestIdleCallback' in window && !isMobile) {
+        requestIdleCallback(addBatch, { timeout: 1000 });
+    } else {
+        addBatch();
     }
 }
 
@@ -814,12 +845,16 @@ function displayStationsInSidebar(stationsToDisplay) {
         return;
     }
     
-    const displayLimit = Math.min(stationsToDisplay.length, 200);
+    // Reduce initial list on mobile for faster rendering
+    const displayLimit = isMobile ? Math.min(stationsToDisplay.length, 50) : Math.min(stationsToDisplay.length, 200);
     
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
     stationsToDisplay.slice(0, displayLimit).forEach(station => {
         const li = createStationListItem(station);
-        stationList.appendChild(li);
+        fragment.appendChild(li);
     });
+    stationList.appendChild(fragment);
     
     // Add load more button if needed
     if (stationsToDisplay.length > displayLimit) {
@@ -828,17 +863,20 @@ function displayStationsInSidebar(stationsToDisplay) {
         loadMoreBtn.textContent = `Load More (${stationsToDisplay.length - displayLimit} more stations)`;
         loadMoreBtn.onclick = () => {
             const currentCount = stationList.querySelectorAll('.station-item').length;
-            const nextBatch = stationsToDisplay.slice(currentCount, currentCount + 100);
+            const batchSize = isMobile ? 30 : 100;
+            const nextBatch = stationsToDisplay.slice(currentCount, currentCount + batchSize);
             
+            const fragment = document.createDocumentFragment();
             nextBatch.forEach(station => {
                 const li = createStationListItem(station);
-                stationList.insertBefore(li, loadMoreBtn);
+                fragment.appendChild(li);
             });
+            stationList.insertBefore(fragment, loadMoreBtn);
             
-            if (currentCount + 100 >= stationsToDisplay.length) {
+            if (currentCount + batchSize >= stationsToDisplay.length) {
                 loadMoreBtn.remove();
             } else {
-                loadMoreBtn.textContent = `Load More (${stationsToDisplay.length - currentCount - 100} more stations)`;
+                loadMoreBtn.textContent = `Load More (${stationsToDisplay.length - currentCount - batchSize} more stations)`;
             }
         };
         stationList.appendChild(loadMoreBtn);
@@ -1063,11 +1101,19 @@ function registerUIBindings() {
     if (mapControlsOverlay) {
         mapControlsOverlay.addEventListener('click', closeMobileMapPanel);
     }
+    
+    // Debounced resize handler to update mobile detection
+    let resizeTimeout;
     window.addEventListener('resize', () => {
-        if (!isMobileViewport()) {
-            closeMobileMapPanel();
-        }
-    });
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            detectDeviceCapabilities();
+            if (!isMobileViewport()) {
+                closeMobileMapPanel();
+            }
+        }, 250);
+    }, { passive: true });
+    
     initializeAtmosFeature();
 }
 
@@ -1101,8 +1147,14 @@ window.playStationById = function(uuid) {
     }
 };
 
-// Play station
+// Play station with cleanup
 function playStation(station) {
+    // Stop any existing playback first
+    if (audioPlayer.src) {
+        audioPlayer.pause();
+        audioPlayer.src = '';
+    }
+    
     currentStation = station;
     
     // Update player UI
@@ -1112,14 +1164,17 @@ function playStation(station) {
     // Show player
     playerDiv.classList.add('active');
     
-    // Update station list highlighting
-    document.querySelectorAll('.station-item').forEach(item => {
-        item.classList.remove('playing');
-    });
+    // Update station list highlighting - use more efficient method
+    const currentPlaying = document.querySelector('.station-item.playing');
+    if (currentPlaying) currentPlaying.classList.remove('playing');
+    
     const currentItem = document.querySelector(`[data-uuid="${station.stationuuid}"]`);
     if (currentItem) {
         currentItem.classList.add('playing');
-        currentItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Use smooth scroll only on desktop
+        if (!isMobile) {
+            currentItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
     
     // Load and play audio
@@ -1158,10 +1213,10 @@ playPauseBtn.addEventListener('click', () => {
     }
 });
 
-// Volume control
+// Volume control - passive for better scroll performance
 volumeSlider.addEventListener('input', (e) => {
     audioPlayer.volume = e.target.value / 100;
-});
+}, { passive: true });
 
 // Toggle sidebar
 const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -1230,10 +1285,11 @@ sidebarOverlay.addEventListener('click', () => {
     sidebarOverlay.classList.remove('active');
 });
 
-// Search functionality with debouncing
+// Search functionality with debouncing - longer delay on mobile
 let searchTimeout;
 function searchStations() {
     clearTimeout(searchTimeout);
+    const debounceDelay = isMobile ? 500 : 300;
     searchTimeout = setTimeout(() => {
         const searchLabel = searchInput.value.trim();
         const query = searchLabel.toLowerCase().trim();
@@ -1310,12 +1366,26 @@ function updateStats(isPreview = false) {
 
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', () => {
+    // Re-detect device on load
+    detectDeviceCapabilities();
+    
+    // Defer non-critical initialization on mobile
     initMap();
     registerUIBindings();
     setActiveFilterChip(activeFilterKey);
-    renderFeaturedGrid();
-    primeFeaturedExperience();
-    fetchStations();
+    
+    if (isMobile) {
+        // Delay heavy operations on mobile
+        setTimeout(() => {
+            renderFeaturedGrid();
+            primeFeaturedExperience();
+            fetchStations();
+        }, 100);
+    } else {
+        renderFeaturedGrid();
+        primeFeaturedExperience();
+        fetchStations();
+    }
     
     // Register service worker for offline support
     if ('serviceWorker' in navigator) {
