@@ -1,0 +1,233 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: light;
+  --paper: #f3efe6;
+  --paper-strong: rgba(255, 255, 255, 0.82);
+  --ink: #141722;
+  --muted: #5d6471;
+  --line: rgba(20, 23, 34, 0.12);
+  --accent: #d76f4a;
+  --accent-2: #4d7f72;
+  --shadow-lg: 0 24px 60px rgba(28, 26, 22, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Manrope', sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(215, 111, 74, 0.14), transparent 22%),
+    radial-gradient(circle at 84% 16%, rgba(77, 127, 114, 0.16), transparent 22%),
+    linear-gradient(180deg, #f7f3eb 0%, #ede8dd 38%, #e7e0d1 100%);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(19, 23, 34, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(19, 23, 34, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, black 38%, transparent 100%);
+  opacity: 0.7;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.landing-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.landing-hero,
+.landing-panel {
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-lg);
+}
+
+.landing-hero {
+  padding: 28px;
+}
+
+.eyebrow,
+.eyebrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.eyebrow::before,
+.eyebrow-link::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #f2a170);
+  box-shadow: 0 0 0 6px rgba(215, 111, 74, 0.12);
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Fraunces', serif;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+h1 {
+  margin-top: 14px;
+  font-size: clamp(2.2rem, 5vw, 4.4rem);
+  line-height: 0.96;
+  max-width: 11ch;
+}
+
+.hero-copy {
+  margin: 14px 0 0;
+  max-width: 66ch;
+  color: var(--muted);
+  font-size: 1.06rem;
+  line-height: 1.75;
+}
+
+.cta-row,
+.tag-row,
+.link-grid,
+.stat-grid,
+.bullet-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cta-row {
+  margin-top: 18px;
+}
+
+.cta-primary,
+.cta-secondary,
+.tag,
+.link-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 12px 16px;
+  text-decoration: none;
+  border: 1px solid var(--line);
+}
+
+.cta-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, #f2a170 100%);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(215, 111, 74, 0.22);
+}
+
+.cta-secondary,
+.tag,
+.link-card {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.landing-panel {
+  padding: 22px 24px;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.content-card {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.66);
+  padding: 20px;
+}
+
+.content-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+}
+
+.content-card p,
+.content-card li,
+.note {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.content-card ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.content-card li + li {
+  margin-top: 8px;
+}
+
+.link-grid {
+  margin-top: 18px;
+}
+
+.link-card {
+  padding: 10px 14px;
+}
+
+.mini-collection {
+  display: grid;
+  gap: 12px;
+}
+
+.mini-collection a,
+.mini-collection span {
+  display: block;
+}
+
+.note {
+  margin-top: 14px;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 800px) {
+  main {
+    width: min(1120px, calc(100vw - 24px));
+    padding-top: 12px;
+  }
+
+  .landing-hero,
+  .landing-panel,
+  .content-card {
+    border-radius: 22px;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}

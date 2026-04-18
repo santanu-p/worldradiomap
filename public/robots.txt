@@ -6,7 +6,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
-Disallow: /*.json$
 
 # Crawl-delay for polite bots (optional, most major bots ignore this)
 Crawl-delay: 1

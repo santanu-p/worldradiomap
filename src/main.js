@@ -14,6 +14,154 @@ import {
 
 const LIVE_STATION_LIMIT = 3000;
 const LIVE_FETCH_TIMEOUT_MS = 22000;
+const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v1';
+const LIVE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const LIVE_REFRESH_RETRY_DELAY_MS = 1200;
+const UI_SOUND_PREF_KEY = 'world-radio-atlas.ui-sounds.v1';
+const UI_SOUND_PROFILE_PREF_KEY = 'world-radio-atlas.ui-sound-profile.v1';
+const SPATIAL_AUDIO_PREF_KEY = 'world-radio-atlas.spatial-audio-mode.v1';
+const UI_SOUND_VOLUME = 0.06;
+const UI_SOUND_COOLDOWN_MS = 120;
+const SPATIAL_AUDIO_MODES = ['off', 'immersive', 'field360'];
+const SPATIAL_AUDIO_LABELS = {
+  off: 'Off',
+  immersive: 'Immersive',
+  field360: '360 field'
+};
+const UI_SOUND_PROFILES = {
+  soft: {
+    label: 'Soft',
+    click: [
+      {
+        frequency: 560,
+        endFrequency: 500,
+        type: 'sine',
+        peak: 0.12,
+        attack: 0.003,
+        hold: 0.004,
+        release: 0.065
+      },
+      {
+        offset: 0.006,
+        frequency: 1120,
+        endFrequency: 920,
+        type: 'sine',
+        peak: 0.03,
+        attack: 0.002,
+        hold: 0.003,
+        release: 0.055
+      }
+    ],
+    success: [
+      {
+        frequency: 494,
+        endFrequency: 523,
+        type: 'sine',
+        peak: 0.14,
+        attack: 0.006,
+        hold: 0.026,
+        release: 0.1
+      },
+      {
+        offset: 0.072,
+        frequency: 659,
+        endFrequency: 698,
+        type: 'sine',
+        peak: 0.12,
+        attack: 0.006,
+        hold: 0.026,
+        release: 0.11
+      },
+      {
+        offset: 0.145,
+        frequency: 784,
+        endFrequency: 830,
+        type: 'sine',
+        peak: 0.09,
+        attack: 0.005,
+        hold: 0.02,
+        release: 0.1
+      }
+    ],
+    error: [
+      {
+        frequency: 523,
+        endFrequency: 466,
+        type: 'triangle',
+        peak: 0.12,
+        attack: 0.005,
+        hold: 0.026,
+        release: 0.11
+      },
+      {
+        offset: 0.075,
+        frequency: 392,
+        endFrequency: 329,
+        type: 'triangle',
+        peak: 0.11,
+        attack: 0.005,
+        hold: 0.03,
+        release: 0.12
+      }
+    ]
+  },
+  arcade: {
+    label: 'Arcade',
+    click: [
+      {
+        frequency: 980,
+        endFrequency: 900,
+        type: 'triangle',
+        peak: 0.14,
+        attack: 0.002,
+        hold: 0.008,
+        release: 0.045
+      }
+    ],
+    success: [
+      {
+        frequency: 620,
+        endFrequency: 660,
+        type: 'square',
+        peak: 0.13,
+        attack: 0.003,
+        hold: 0.022,
+        release: 0.075
+      },
+      {
+        offset: 0.05,
+        frequency: 820,
+        endFrequency: 880,
+        type: 'square',
+        peak: 0.12,
+        attack: 0.003,
+        hold: 0.022,
+        release: 0.075
+      }
+    ],
+    error: [
+      {
+        frequency: 610,
+        endFrequency: 560,
+        type: 'triangle',
+        peak: 0.13,
+        attack: 0.003,
+        hold: 0.028,
+        release: 0.085
+      },
+      {
+        offset: 0.06,
+        frequency: 430,
+        endFrequency: 380,
+        type: 'triangle',
+        peak: 0.12,
+        attack: 0.003,
+        hold: 0.032,
+        release: 0.095
+      }
+    ]
+  }
+};
 const LIVE_STATION_QUERY = `json/stations/search?order=votes&reverse=true&has_geo_info=true&hidebroken=true&limit=${LIVE_STATION_LIMIT}`;
 const API_ENDPOINTS = [
   `https://all.api.radio-browser.info/${LIVE_STATION_QUERY}`,
@@ -31,6 +179,15 @@ app.innerHTML = `
         <span class="eyebrow">Broadcast atlas / live radio</span>
         <h1>World Radio Atlas</h1>
         <p>Curated signals, live discovery, and a map-first layout built from scratch for faster browsing and clearer listening.</p>
+        <nav class="seo-hub-links" aria-label="Indexable landing pages">
+          <span class="seo-hub-label">Browse landing pages</span>
+          <div class="seo-hub-row">
+            <a class="ghost-button seo-hub-link" href="/regions/">Regions</a>
+            <a class="ghost-button seo-hub-link" href="/genres/">Genres</a>
+            <a class="ghost-button seo-hub-link" href="/regions/europe/">Europe</a>
+            <a class="ghost-button seo-hub-link" href="/genres/music/">Music</a>
+          </div>
+        </nav>
       </div>
       <div class="masthead-actions">
         <div class="status-chip" id="statusChip">Curated preview ready</div>
@@ -128,6 +285,9 @@ app.innerHTML = `
             <div class="control-row">
               <button class="play-toggle" id="playPauseBtn" type="button">Play</button>
               <button class="secondary-button" id="focusMapButton" type="button">Focus map</button>
+              <button class="secondary-button spatial-audio-toggle" id="spatialAudioToggle" type="button">Spatial audio: Off</button>
+              <button class="secondary-button sound-toggle" id="uiSoundToggle" type="button" aria-pressed="false">UI sounds: Off</button>
+              <button class="secondary-button sound-profile-toggle" id="uiSoundProfileToggle" type="button">Sound profile: Soft</button>
             </div>
             <div class="volume-wrap">
               <label for="volumeSlider">Volume</label>
@@ -181,6 +341,9 @@ const refs = {
   nowPlayingMeta: document.querySelector('#nowPlayingMeta'),
   playPauseBtn: document.querySelector('#playPauseBtn'),
   focusMapButton: document.querySelector('#focusMapButton'),
+  spatialAudioToggle: document.querySelector('#spatialAudioToggle'),
+  uiSoundToggle: document.querySelector('#uiSoundToggle'),
+  uiSoundProfileToggle: document.querySelector('#uiSoundProfileToggle'),
   volumeSlider: document.querySelector('#volumeSlider'),
   trackStats: document.querySelector('#trackStats'),
   loadMoreBtn: document.querySelector('#loadMoreBtn'),
@@ -205,6 +368,13 @@ const state = {
   allStations: fallbackStations.slice(),
   featuredStations: fallbackStations.slice(0, 6),
   filteredStations: fallbackStations.slice(),
+  liveCacheUpdatedAt: null,
+  spatialAudioMode: 'off',
+  spatialAudioReady: false,
+  uiSoundsEnabled: false,
+  uiSoundProfile: 'soft',
+  hasUserInteracted: false,
+  lastUiSoundAt: 0,
   renderToken: 0,
   markerToken: 0,
   stationLayers: new Map(),
@@ -216,6 +386,53 @@ const REGION_KEYS = new Set(Object.keys(regionBounds));
 const HASH_ALIASES = {
   electronic: 'ambient',
   top: 'all'
+};
+
+const DEFAULT_SEO = {
+  title: 'World Radio Atlas | Live Radio Stations on a Global Map',
+  description: 'Discover live radio stations from around the world on an interactive map with curated picks, filters, and instant playback.'
+};
+
+const REGION_SEO = {
+  americas: {
+    title: 'Americas live radio stations | World Radio Atlas',
+    description: 'Browse live radio stations across North, Central, and South America on the World Radio Atlas map.'
+  },
+  europe: {
+    title: 'Europe live radio stations | World Radio Atlas',
+    description: 'Explore live radio stations from across Europe with map-based browsing and quick access to curated picks.'
+  },
+  asia: {
+    title: 'Asia live radio stations | World Radio Atlas',
+    description: 'Find live radio stations from across Asia on a fast, map-first discovery page.'
+  },
+  africa: {
+    title: 'Africa live radio stations | World Radio Atlas',
+    description: 'Discover live radio stations from across Africa with filters for music, news, and talk.'
+  },
+  oceania: {
+    title: 'Oceania live radio stations | World Radio Atlas',
+    description: 'Browse live radio stations from Australia, New Zealand, and the wider Oceania region.'
+  }
+};
+
+const FILTER_SEO = {
+  music: {
+    title: 'Music radio stations | World Radio Atlas',
+    description: 'Browse live music radio stations from around the world with curated map-based discovery.'
+  },
+  news: {
+    title: 'News radio stations | World Radio Atlas',
+    description: 'Explore live news and talk radio stations from around the world on a global map.'
+  },
+  talk: {
+    title: 'Talk radio stations | World Radio Atlas',
+    description: 'Find live talk radio stations, interviews, and conversation-led streams across the world.'
+  },
+  ambient: {
+    title: 'Ambient radio stations | World Radio Atlas',
+    description: 'Discover ambient, chill, and lo-fi radio stations curated for slower listening.'
+  }
 };
 
 if ('serviceWorker' in navigator) {
@@ -238,6 +455,22 @@ audio.volume = 0.7;
 
 let map;
 let clusterLayer;
+let uiAudioContext;
+let uiMasterGain;
+let uiToneFilter;
+let uiToneCompressor;
+let streamAudioContext;
+let streamSourceNode;
+let streamDryGain;
+let streamWetGain;
+let streamWetFilter;
+let streamConvolver;
+let streamTapDelayA;
+let streamTapDelayB;
+let streamTapGainA;
+let streamTapGainB;
+let streamTapPanA;
+let streamTapPanB;
 
 function makeStationId(station) {
   return station.id || station.stationuuid || `${station.name}-${station.country}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -266,6 +499,540 @@ function normalizeStation(item) {
     favicon: item.favicon || '',
     source: item.source || 'live'
   };
+}
+
+function sanitizeStations(items) {
+  if (!Array.isArray(items)) return [];
+
+  const seen = new Set();
+  return items
+    .map(normalizeStation)
+    .filter((station) => station && station.name && station.url)
+    .filter((station) => station.lat >= -90 && station.lat <= 90 && station.lng >= -180 && station.lng <= 180)
+    .filter((station) => {
+      if (seen.has(station.id)) return false;
+      seen.add(station.id);
+      return true;
+    });
+}
+
+function readCachedLiveStations() {
+  if (!('localStorage' in window)) return null;
+
+  try {
+    const raw = window.localStorage.getItem(LIVE_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    const stations = sanitizeStations(parsed?.stations || []);
+    if (!stations.length) return null;
+
+    const cachedAt = Number(parsed?.cachedAt);
+
+    return {
+      stations,
+      cachedAt: Number.isFinite(cachedAt) && cachedAt > 0 ? cachedAt : Date.now()
+    };
+  } catch (error) {
+    console.warn('Could not read local cache.', error);
+    return null;
+  }
+}
+
+function writeCachedLiveStations(stations, cachedAt = Date.now()) {
+  if (!('localStorage' in window)) return;
+
+  try {
+    window.localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({
+      cachedAt,
+      stations
+    }));
+  } catch (error) {
+    console.warn('Could not write local cache.', error);
+  }
+
+  return cachedAt;
+}
+
+function shouldRefreshLiveCache(cacheEntry) {
+  if (!cacheEntry?.cachedAt) return true;
+  return (Date.now() - cacheEntry.cachedAt) >= LIVE_CACHE_TTL_MS;
+}
+
+function readUiSoundPreference() {
+  if (!('localStorage' in window)) return false;
+
+  try {
+    return window.localStorage.getItem(UI_SOUND_PREF_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function writeUiSoundPreference(enabled) {
+  if (!('localStorage' in window)) return;
+
+  try {
+    window.localStorage.setItem(UI_SOUND_PREF_KEY, enabled ? 'on' : 'off');
+  } catch {
+    // Ignore preference write failures.
+  }
+}
+
+function readUiSoundProfilePreference() {
+  if (!('localStorage' in window)) return 'soft';
+
+  try {
+    const raw = window.localStorage.getItem(UI_SOUND_PROFILE_PREF_KEY);
+    return UI_SOUND_PROFILES[raw] ? raw : 'soft';
+  } catch {
+    return 'soft';
+  }
+}
+
+function writeUiSoundProfilePreference(profile) {
+  if (!('localStorage' in window)) return;
+
+  if (!UI_SOUND_PROFILES[profile]) return;
+
+  try {
+    window.localStorage.setItem(UI_SOUND_PROFILE_PREF_KEY, profile);
+  } catch {
+    // Ignore preference write failures.
+  }
+}
+
+function readSpatialAudioPreference() {
+  if (!('localStorage' in window)) return 'off';
+
+  try {
+    const value = window.localStorage.getItem(SPATIAL_AUDIO_PREF_KEY);
+    return SPATIAL_AUDIO_MODES.includes(value) ? value : 'off';
+  } catch {
+    return 'off';
+  }
+}
+
+function writeSpatialAudioPreference(mode) {
+  if (!('localStorage' in window)) return;
+  if (!SPATIAL_AUDIO_MODES.includes(mode)) return;
+
+  try {
+    window.localStorage.setItem(SPATIAL_AUDIO_PREF_KEY, mode);
+  } catch {
+    // Ignore preference write failures.
+  }
+}
+
+function getUiSoundProfile() {
+  return UI_SOUND_PROFILES[state.uiSoundProfile] || UI_SOUND_PROFILES.soft;
+}
+
+function syncUiSoundToggle() {
+  if (!refs.uiSoundToggle) return;
+
+  refs.uiSoundToggle.textContent = state.uiSoundsEnabled ? 'UI sounds: On' : 'UI sounds: Off';
+  refs.uiSoundToggle.setAttribute('aria-pressed', String(state.uiSoundsEnabled));
+  refs.uiSoundToggle.classList.toggle('is-on', state.uiSoundsEnabled);
+}
+
+function syncUiSoundProfileToggle() {
+  if (!refs.uiSoundProfileToggle) return;
+
+  const activeProfile = getUiSoundProfile();
+  refs.uiSoundProfileToggle.textContent = `Sound profile: ${activeProfile.label}`;
+  refs.uiSoundProfileToggle.classList.toggle('is-arcade', state.uiSoundProfile === 'arcade');
+}
+
+function syncSpatialAudioToggle() {
+  if (!refs.spatialAudioToggle) return;
+
+  const label = SPATIAL_AUDIO_LABELS[state.spatialAudioMode] || SPATIAL_AUDIO_LABELS.off;
+  refs.spatialAudioToggle.textContent = `Spatial audio: ${label}`;
+  refs.spatialAudioToggle.classList.toggle('is-on', state.spatialAudioMode !== 'off');
+  refs.spatialAudioToggle.classList.toggle('is-360', state.spatialAudioMode === 'field360');
+}
+
+function markUserInteraction() {
+  if (state.hasUserInteracted) return;
+
+  state.hasUserInteracted = true;
+}
+
+function getUiAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+
+  if (!uiAudioContext) {
+    uiAudioContext = new AudioContextClass();
+  }
+
+  if (!uiMasterGain || uiMasterGain.context !== uiAudioContext) {
+    uiToneFilter = uiAudioContext.createBiquadFilter();
+    uiToneFilter.type = 'lowpass';
+    uiToneFilter.frequency.value = 2800;
+    uiToneFilter.Q.value = 0.24;
+
+    uiToneCompressor = uiAudioContext.createDynamicsCompressor();
+    uiToneCompressor.threshold.value = -28;
+    uiToneCompressor.knee.value = 16;
+    uiToneCompressor.ratio.value = 2.2;
+    uiToneCompressor.attack.value = 0.003;
+    uiToneCompressor.release.value = 0.12;
+
+    uiMasterGain = uiAudioContext.createGain();
+    // Keep UI sounds subtle and separate from stream volume.
+    uiMasterGain.gain.value = UI_SOUND_VOLUME;
+
+    uiToneFilter.connect(uiToneCompressor);
+    uiToneCompressor.connect(uiMasterGain);
+    uiMasterGain.connect(uiAudioContext.destination);
+  }
+
+  return uiAudioContext;
+}
+
+function withUiAudioContext(callback) {
+  const context = getUiAudioContext();
+  if (!context) return;
+
+  if (context.state === 'suspended') {
+    context.resume()
+      .then(() => {
+        callback(context);
+      })
+      .catch(() => {
+        // Ignore resume failures.
+      });
+    return;
+  }
+
+  callback(context);
+}
+
+function reserveUiSoundSlot(minInterval = UI_SOUND_COOLDOWN_MS) {
+  if (!state.uiSoundsEnabled || !state.hasUserInteracted) return false;
+
+  const now = performance.now();
+  if (now - state.lastUiSoundAt < minInterval) return false;
+  state.lastUiSoundAt = now;
+  return true;
+}
+
+function createSpatialImpulseResponse(context, duration = 1.25, decay = 2.4) {
+  const sampleRate = context.sampleRate;
+  const length = Math.floor(sampleRate * duration);
+  const impulse = context.createBuffer(2, length, sampleRate);
+
+  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+    const data = impulse.getChannelData(channel);
+    for (let index = 0; index < length; index += 1) {
+      const envelope = (1 - (index / length)) ** decay;
+      data[index] = (Math.random() * 2 - 1) * envelope * 0.36;
+    }
+  }
+
+  return impulse;
+}
+
+function createStereoPanNode(context, panValue) {
+  if (typeof context.createStereoPanner === 'function') {
+    const panner = context.createStereoPanner();
+    panner.pan.value = panValue;
+    return panner;
+  }
+
+  return context.createGain();
+}
+
+function smoothAudioParam(param, value, ramp = 0.05) {
+  const now = param.context.currentTime;
+  const currentValue = Number.isFinite(param.value) ? param.value : value;
+  param.cancelScheduledValues(now);
+  param.setValueAtTime(currentValue, now);
+  param.linearRampToValueAtTime(value, now + ramp);
+}
+
+function setSpatialPan(node, value) {
+  if (!node?.pan) return;
+  node.pan.setValueAtTime(value, node.context.currentTime);
+}
+
+function applySpatialAudioMode(mode) {
+  if (!state.spatialAudioReady || !streamAudioContext || !streamDryGain || !streamWetGain) {
+    return;
+  }
+
+  switch (mode) {
+    case 'immersive':
+      smoothAudioParam(streamDryGain.gain, 0.86, 0.06);
+      smoothAudioParam(streamWetGain.gain, 0.24, 0.06);
+      smoothAudioParam(streamTapGainA.gain, 0.12, 0.06);
+      smoothAudioParam(streamTapGainB.gain, 0.14, 0.06);
+      smoothAudioParam(streamWetFilter.frequency, 4400, 0.08);
+      streamTapDelayA.delayTime.setValueAtTime(0.015, streamAudioContext.currentTime);
+      streamTapDelayB.delayTime.setValueAtTime(0.022, streamAudioContext.currentTime);
+      setSpatialPan(streamTapPanA, -0.5);
+      setSpatialPan(streamTapPanB, 0.5);
+      break;
+    case 'field360':
+      smoothAudioParam(streamDryGain.gain, 0.74, 0.06);
+      smoothAudioParam(streamWetGain.gain, 0.34, 0.06);
+      smoothAudioParam(streamTapGainA.gain, 0.2, 0.06);
+      smoothAudioParam(streamTapGainB.gain, 0.22, 0.06);
+      smoothAudioParam(streamWetFilter.frequency, 3600, 0.08);
+      streamTapDelayA.delayTime.setValueAtTime(0.019, streamAudioContext.currentTime);
+      streamTapDelayB.delayTime.setValueAtTime(0.028, streamAudioContext.currentTime);
+      setSpatialPan(streamTapPanA, -0.78);
+      setSpatialPan(streamTapPanB, 0.78);
+      break;
+    default:
+      smoothAudioParam(streamDryGain.gain, 1, 0.05);
+      smoothAudioParam(streamWetGain.gain, 0, 0.05);
+      smoothAudioParam(streamTapGainA.gain, 0, 0.05);
+      smoothAudioParam(streamTapGainB.gain, 0, 0.05);
+      smoothAudioParam(streamWetFilter.frequency, 5200, 0.06);
+      streamTapDelayA.delayTime.setValueAtTime(0.015, streamAudioContext.currentTime);
+      streamTapDelayB.delayTime.setValueAtTime(0.022, streamAudioContext.currentTime);
+      setSpatialPan(streamTapPanA, -0.5);
+      setSpatialPan(streamTapPanB, 0.5);
+  }
+}
+
+function ensureSpatialAudioGraph() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return false;
+
+  try {
+    if (!streamAudioContext) {
+      streamAudioContext = new AudioContextClass();
+    }
+
+    if (!streamSourceNode) {
+      streamSourceNode = streamAudioContext.createMediaElementSource(audio);
+    }
+
+    if (!state.spatialAudioReady) {
+      streamDryGain = streamAudioContext.createGain();
+      streamWetGain = streamAudioContext.createGain();
+      streamWetFilter = streamAudioContext.createBiquadFilter();
+      streamConvolver = streamAudioContext.createConvolver();
+      streamTapDelayA = streamAudioContext.createDelay(0.08);
+      streamTapDelayB = streamAudioContext.createDelay(0.08);
+      streamTapGainA = streamAudioContext.createGain();
+      streamTapGainB = streamAudioContext.createGain();
+      streamTapPanA = createStereoPanNode(streamAudioContext, -0.5);
+      streamTapPanB = createStereoPanNode(streamAudioContext, 0.5);
+
+      streamWetFilter.type = 'lowpass';
+      streamWetFilter.frequency.value = 5200;
+      streamWetFilter.Q.value = 0.62;
+
+      streamConvolver.normalize = true;
+      streamConvolver.buffer = createSpatialImpulseResponse(streamAudioContext);
+
+      streamTapDelayA.delayTime.value = 0.015;
+      streamTapDelayB.delayTime.value = 0.022;
+
+      streamTapGainA.gain.value = 0;
+      streamTapGainB.gain.value = 0;
+      streamWetGain.gain.value = 0;
+      streamDryGain.gain.value = 1;
+
+      streamSourceNode.connect(streamDryGain);
+      streamDryGain.connect(streamAudioContext.destination);
+
+      streamSourceNode.connect(streamWetFilter);
+      streamWetFilter.connect(streamConvolver);
+      streamConvolver.connect(streamWetGain);
+
+      streamSourceNode.connect(streamTapDelayA);
+      streamTapDelayA.connect(streamTapPanA);
+      streamTapPanA.connect(streamTapGainA);
+      streamTapGainA.connect(streamWetGain);
+
+      streamSourceNode.connect(streamTapDelayB);
+      streamTapDelayB.connect(streamTapPanB);
+      streamTapPanB.connect(streamTapGainB);
+      streamTapGainB.connect(streamWetGain);
+
+      streamWetGain.connect(streamAudioContext.destination);
+      state.spatialAudioReady = true;
+      applySpatialAudioMode(state.spatialAudioMode);
+    }
+
+    if (streamAudioContext.state === 'suspended') {
+      streamAudioContext.resume().catch(() => {
+        // Ignore resume failures.
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.warn('Spatial audio graph could not be initialized.', error);
+    return false;
+  }
+}
+
+function scheduleUiTone(context, startTime, {
+  frequency,
+  endFrequency,
+  type = 'sine',
+  peak = 0.3,
+  attack = 0.005,
+  hold = 0.02,
+  release = 0.055
+}) {
+  if (!uiToneFilter || !uiMasterGain) return;
+
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
+  const startFrequency = Math.max(1, Number(frequency) || 440);
+  const glideFrequency = Math.max(1, Number(endFrequency ?? startFrequency));
+  const toneDuration = attack + hold + release;
+  const peakGain = Math.max(0.0001, peak);
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(startFrequency, startTime);
+  if (glideFrequency !== startFrequency) {
+    oscillator.frequency.exponentialRampToValueAtTime(glideFrequency, startTime + toneDuration);
+  }
+
+  gainNode.gain.setValueAtTime(0.0001, startTime);
+  gainNode.gain.exponentialRampToValueAtTime(peakGain, startTime + attack);
+  gainNode.gain.setValueAtTime(peakGain, startTime + attack + hold);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + attack + hold + release);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(uiToneFilter);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + toneDuration + 0.01);
+}
+
+function playUiClickCue() {
+  const profile = getUiSoundProfile();
+  if (!reserveUiSoundSlot(90)) return;
+
+  withUiAudioContext((context) => {
+    const start = context.currentTime + 0.002;
+    profile.click.forEach((tone) => {
+      const { offset = 0, ...config } = tone;
+      scheduleUiTone(context, start + offset, config);
+    });
+  });
+}
+
+function playUiSuccessCue() {
+  const profile = getUiSoundProfile();
+  if (!reserveUiSoundSlot(260)) return;
+
+  withUiAudioContext((context) => {
+    const start = context.currentTime + 0.002;
+    profile.success.forEach((tone) => {
+      const { offset = 0, ...config } = tone;
+      scheduleUiTone(context, start + offset, config);
+    });
+  });
+}
+
+function playUiErrorCue() {
+  const profile = getUiSoundProfile();
+  if (!reserveUiSoundSlot(260)) return;
+
+  withUiAudioContext((context) => {
+    const start = context.currentTime + 0.002;
+    profile.error.forEach((tone) => {
+      const { offset = 0, ...config } = tone;
+      scheduleUiTone(context, start + offset, config);
+    });
+  });
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function formatCacheUpdatedAt(timestamp) {
+  if (!Number.isFinite(timestamp)) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleString([], {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+}
+
+function updateSeoMetadata({ title, description }) {
+  const metaDescription = document.querySelector('meta[name="description"]');
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  const ogDescription = document.querySelector('meta[property="og:description"]');
+  const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+  const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+
+  document.title = title || DEFAULT_SEO.title;
+  if (metaDescription) metaDescription.content = description || DEFAULT_SEO.description;
+  if (ogTitle) ogTitle.content = title || DEFAULT_SEO.title;
+  if (ogDescription) ogDescription.content = description || DEFAULT_SEO.description;
+  if (twitterTitle) twitterTitle.content = title || DEFAULT_SEO.title;
+  if (twitterDescription) twitterDescription.content = description || DEFAULT_SEO.description;
+}
+
+function getSeoMetadata() {
+  if (state.selectedId) {
+    const station = getSelectedStation();
+    if (station) {
+      return {
+        title: `${station.name} | World Radio Atlas`,
+        description: `Listen to ${station.name} from ${station.country}${station.city ? `, ${station.city}` : ''} on World Radio Atlas.`
+      };
+    }
+  }
+
+  if (state.activeFilter !== 'all' && state.activeFilter !== 'nearby' && FILTER_SEO[state.activeFilter]) {
+    return FILTER_SEO[state.activeFilter];
+  }
+
+  if (state.activeRegion !== 'world' && REGION_SEO[state.activeRegion]) {
+    return REGION_SEO[state.activeRegion];
+  }
+
+  if (state.query) {
+    return {
+      title: `Search results for "${state.query}" | World Radio Atlas`,
+      description: `Browse live radio stations matching ${state.query} on the World Radio Atlas map.`
+    };
+  }
+
+  return DEFAULT_SEO;
+}
+
+function syncSeoMetadata() {
+  updateSeoMetadata(getSeoMetadata());
+}
+
+function updateStatusChip() {
+  if (!refs.statusChip) return;
+
+  if (state.mode !== 'live') {
+    refs.statusChip.textContent = 'Curated preview';
+    return;
+  }
+
+  const formatted = formatCacheUpdatedAt(state.liveCacheUpdatedAt);
+  refs.statusChip.textContent = formatted
+    ? `Live directory · Updated ${formatted}`
+    : 'Live directory';
+}
+
+async function getLiveStationsWithRetry() {
+  const stations = await getLiveStations();
+  if (stations.length) return stations;
+
+  await wait(LIVE_REFRESH_RETRY_DELAY_MS);
+  return getLiveStations();
 }
 
 function escapeHtml(value) {
@@ -363,15 +1130,13 @@ function setStatus(message, tone = 'neutral') {
 
 function setMode(mode, message) {
   state.mode = mode;
-  const modeName = mode === 'live' ? 'Live directory' : 'Curated preview';
   refs.modeLabel.textContent = mode === 'live' ? 'Live' : 'Preview';
   refs.modeBadge.textContent = mode === 'live' ? 'Live' : 'Preview';
   refs.liveBadge.textContent = mode === 'live' ? 'Live' : 'Preview';
-  if (refs.statusChip) {
-    refs.statusChip.textContent = modeName;
-  }
+  updateStatusChip();
   setStatus(message, mode);
   updateStats();
+  syncSeoMetadata();
 }
 
 function updateStats() {
@@ -381,6 +1146,21 @@ function updateStats() {
   refs.countryCount.textContent = countries.size.toLocaleString();
   refs.featuredCount.textContent = state.featuredStations.length.toLocaleString();
   refs.visibleCount.textContent = Math.min(state.visibleCount, stations.length).toLocaleString();
+}
+
+function applyLiveDirectory(stations, modeMessage, cacheUpdatedAt = Date.now()) {
+  state.liveCacheUpdatedAt = cacheUpdatedAt;
+  state.allStations = stations;
+  state.featuredStations = stations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
+  state.visibleCount = 18;
+  setMode('live', modeMessage);
+
+  if (state.activeFilter === 'nearby') {
+    applyNearbyFilter();
+    return;
+  }
+
+  applyFilters();
 }
 
 function getStationMatches(station) {
@@ -593,6 +1373,7 @@ function renderAll() {
   renderMapMarkers();
   updateStats();
   updateActiveCardStyles();
+  syncSeoMetadata();
 }
 
 function showToast(message) {
@@ -658,6 +1439,44 @@ function jumpToRegion(regionKey) {
   }
 }
 
+function getSelectedStation() {
+  if (!state.selectedId) return null;
+
+  return state.allStations.find((station) => station.id === state.selectedId)
+    || state.filteredStations.find((station) => station.id === state.selectedId)
+    || null;
+}
+
+function focusMapView() {
+  if (!map) return;
+
+  const selectedStation = getSelectedStation();
+  if (selectedStation && Number.isFinite(selectedStation.lat) && Number.isFinite(selectedStation.lng)) {
+    map.flyTo([selectedStation.lat, selectedStation.lng], Math.max(map.getZoom(), 5), { duration: 0.8 });
+    const marker = state.stationLayers.get(selectedStation.id);
+    if (marker) marker.openPopup();
+  } else if (state.activeRegion && regionBounds[state.activeRegion]) {
+    jumpToRegion(state.activeRegion);
+  } else {
+    jumpToRegion('world');
+  }
+
+  const mapPanel = refs.map?.closest('.map-panel');
+  if (!mapPanel) return;
+
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const rect = mapPanel.getBoundingClientRect();
+  const isMostlyVisible = rect.top < viewportHeight * 0.68 && rect.bottom > viewportHeight * 0.32;
+
+  if (!isMostlyVisible) {
+    mapPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => map?.invalidateSize(), 260);
+    return;
+  }
+
+  map.invalidateSize();
+}
+
 async function getLiveStations() {
   let lastError;
 
@@ -677,20 +1496,7 @@ async function getLiveStations() {
       }
 
       const payload = await response.json();
-      if (!Array.isArray(payload)) {
-        throw new Error('Unexpected API response.');
-      }
-
-      const seen = new Set();
-      const stations = payload
-        .map(normalizeStation)
-        .filter((station) => station && station.name && station.url)
-        .filter((station) => station.lat >= -90 && station.lat <= 90 && station.lng >= -180 && station.lng <= 180)
-        .filter((station) => {
-          if (seen.has(station.id)) return false;
-          seen.add(station.id);
-          return true;
-        });
+      const stations = sanitizeStations(payload);
 
       if (stations.length) {
         return stations;
@@ -816,21 +1622,35 @@ function selectStation(station, shouldAutoplay = false) {
   if (shouldAutoplay) {
     playStation(station);
   }
+
+  syncSeoMetadata();
 }
 
 function playStation(station) {
   selectStation(station, false);
   audio.src = station.url;
+
+  if (state.spatialAudioMode !== 'off') {
+    const spatialReady = ensureSpatialAudioGraph();
+    if (spatialReady) {
+      applySpatialAudioMode(state.spatialAudioMode);
+    } else {
+      showToast('Spatial audio could not initialize yet. Continuing in stereo for now.');
+    }
+  }
+
   audio.play()
     .then(() => {
       state.isPlaying = true;
       refs.playPauseBtn.textContent = 'Pause';
       refs.trackStats.textContent = `${station.tags || 'Signal ready'} · streaming now`;
+      playUiSuccessCue();
     })
     .catch(() => {
       state.isPlaying = false;
       refs.playPauseBtn.textContent = 'Play';
       showToast('This stream did not start. Try another station.');
+      playUiErrorCue();
     });
 }
 
@@ -841,7 +1661,7 @@ function pausePlayback() {
 }
 
 function togglePlayback() {
-  const current = state.allStations.find((station) => station.id === state.selectedId);
+  const current = getSelectedStation();
   if (!current) {
     showToast('Pick a station first.');
     return;
@@ -861,7 +1681,7 @@ function resetFilters() {
   state.query = '';
   state.visibleCount = 18;
   refs.searchInput.value = '';
-  renderAll();
+  applyFilters();
   jumpToRegion('world');
   setStatus('Filters cleared. Back to the world view.');
 }
@@ -881,26 +1701,97 @@ function renderMoreStations() {
 }
 
 function bindEvents() {
+  window.addEventListener('pointerdown', markUserInteraction, { passive: true });
+  window.addEventListener('keydown', markUserInteraction, { passive: true });
+
+  refs.uiSoundToggle.addEventListener('click', () => {
+    markUserInteraction();
+    state.uiSoundsEnabled = !state.uiSoundsEnabled;
+    writeUiSoundPreference(state.uiSoundsEnabled);
+    syncUiSoundToggle();
+    showToast(state.uiSoundsEnabled ? 'UI sounds enabled.' : 'UI sounds disabled.');
+  });
+
+  refs.uiSoundProfileToggle.addEventListener('click', () => {
+    markUserInteraction();
+    const profileKeys = Object.keys(UI_SOUND_PROFILES);
+    const currentIndex = profileKeys.indexOf(state.uiSoundProfile);
+    const nextProfile = profileKeys[(currentIndex + 1) % profileKeys.length] || 'soft';
+    state.uiSoundProfile = nextProfile;
+    writeUiSoundProfilePreference(nextProfile);
+    syncUiSoundProfileToggle();
+    showToast(`Sound profile set to ${getUiSoundProfile().label}.`);
+  });
+
+  refs.spatialAudioToggle.addEventListener('click', () => {
+    markUserInteraction();
+    const currentIndex = SPATIAL_AUDIO_MODES.indexOf(state.spatialAudioMode);
+    const nextMode = SPATIAL_AUDIO_MODES[(currentIndex + 1) % SPATIAL_AUDIO_MODES.length] || 'off';
+
+    if (nextMode !== 'off') {
+      const hasStreamSource = Boolean(audio.currentSrc || audio.src);
+      if (!hasStreamSource) {
+        state.spatialAudioMode = nextMode;
+        writeSpatialAudioPreference(nextMode);
+        syncSpatialAudioToggle();
+        showToast(`Spatial audio ${SPATIAL_AUDIO_LABELS[nextMode]} is armed. Start a station to activate.`);
+        return;
+      }
+
+      const spatialReady = ensureSpatialAudioGraph();
+      if (!spatialReady) {
+        state.spatialAudioMode = nextMode;
+        writeSpatialAudioPreference(nextMode);
+        syncSpatialAudioToggle();
+        showToast('Spatial audio setup is pending. It will retry when playback starts.');
+        return;
+      }
+    }
+
+    state.spatialAudioMode = nextMode;
+    writeSpatialAudioPreference(nextMode);
+    syncSpatialAudioToggle();
+    applySpatialAudioMode(nextMode);
+    showToast(`Spatial audio set to ${SPATIAL_AUDIO_LABELS[nextMode]}.`);
+  });
+
+  document.addEventListener('click', (event) => {
+    const targetButton = event.target.closest('button');
+    if (!targetButton) return;
+    playUiClickCue();
+  });
+
   refs.refreshStations.addEventListener('click', async () => {
     const defaultLabel = 'Refresh live directory';
+    const hasLiveDataInView = state.mode === 'live' && state.allStations.length > 0;
     refs.refreshStations.textContent = 'Refreshing...';
     setStatus('Refreshing the live directory...');
     refs.refreshStations.disabled = true;
     try {
-      const liveStations = await getLiveStations();
+      const liveStations = await getLiveStationsWithRetry();
       if (liveStations.length) {
-        state.allStations = liveStations;
-        state.featuredStations = liveStations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
-        state.visibleCount = 18;
+        const cachedAt = writeCachedLiveStations(liveStations);
         state.activeFilter = 'all';
         state.activeRegion = 'world';
-        applyFilters();
-        setMode('live', `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`);
+        applyLiveDirectory(
+          liveStations,
+          `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`,
+          cachedAt
+        );
+        jumpToRegion('world');
+      } else if (hasLiveDataInView) {
+        setStatus('Could not refresh right now. Continuing with your cached stations.', 'live');
+        showToast('Refresh failed. Still using cached stations.');
       } else {
         setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
       }
     } catch (error) {
-      setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
+      if (hasLiveDataInView) {
+        setStatus('Could not refresh right now. Continuing with your cached stations.', 'live');
+        showToast('Refresh failed. Still using cached stations.');
+      } else {
+        setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
+      }
     } finally {
       refs.refreshStations.disabled = false;
       refs.refreshStations.textContent = defaultLabel;
@@ -916,15 +1807,7 @@ function bindEvents() {
   refs.shuffleFeatured.addEventListener('click', shuffleFeatured);
   refs.playPauseBtn.addEventListener('click', togglePlayback);
   refs.focusMapButton.addEventListener('click', () => {
-    if (!map) return;
-    const activeStation = state.allStations.find((station) => station.id === state.selectedId);
-    if (activeStation) {
-      map.flyTo([activeStation.lat, activeStation.lng], Math.max(map.getZoom(), 5), { duration: 0.8 });
-      const marker = state.stationLayers.get(activeStation.id);
-      if (marker) marker.openPopup();
-      return;
-    }
-    map.flyTo(regionBounds.world.center, regionBounds.world.zoom, { duration: 0.8 });
+    focusMapView();
   });
 
   refs.loadMoreBtn.addEventListener('click', renderMoreStations);
@@ -986,6 +1869,12 @@ function bindEvents() {
     pausePlayback();
   });
 
+  audio.addEventListener('error', () => {
+    state.isPlaying = false;
+    refs.playPauseBtn.textContent = 'Play';
+    playUiErrorCue();
+  });
+
   let resizeTimer;
   window.addEventListener('resize', () => {
     window.clearTimeout(resizeTimer);
@@ -1004,6 +1893,12 @@ function bindEvents() {
 async function boot() {
   initializeMap();
   bindEvents();
+  state.spatialAudioMode = readSpatialAudioPreference();
+  state.uiSoundsEnabled = readUiSoundPreference();
+  state.uiSoundProfile = readUiSoundProfilePreference();
+  syncSpatialAudioToggle();
+  syncUiSoundToggle();
+  syncUiSoundProfileToggle();
 
   setMode('preview', 'Exploring a curated preview while the live directory loads.');
 
@@ -1015,24 +1910,46 @@ async function boot() {
 
   window.setTimeout(() => map?.invalidateSize(), 120);
 
-  try {
-    const liveStations = await getLiveStations();
-    if (liveStations.length) {
-      state.allStations = liveStations;
-      state.featuredStations = liveStations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
-      state.visibleCount = 18;
-      setMode('live', `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`);
+  const cachedEntry = readCachedLiveStations();
+  const hasLiveCache = Boolean(cachedEntry?.stations?.length);
 
-      if (state.activeFilter === 'nearby') {
-        applyNearbyFilter();
-      } else {
-        applyFilters();
-      }
+  if (hasLiveCache) {
+    applyLiveDirectory(
+      cachedEntry.stations,
+      `Loaded ${cachedEntry.stations.length.toLocaleString()} stations from your 24-hour cache.`,
+      cachedEntry.cachedAt
+    );
+  }
+
+  const shouldRefresh = !hasLiveCache || shouldRefreshLiveCache(cachedEntry);
+  if (!shouldRefresh) {
+    return;
+  }
+
+  try {
+    const liveStations = await getLiveStationsWithRetry();
+    if (liveStations.length) {
+      const cachedAt = writeCachedLiveStations(liveStations);
+      applyLiveDirectory(
+        liveStations,
+        hasLiveCache
+          ? `24-hour cache refreshed in the background with ${liveStations.length.toLocaleString()} live stations.`
+          : `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`,
+        cachedAt
+      );
     } else {
-      setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+      if (!hasLiveCache) {
+        setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+      } else {
+        setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
+      }
     }
   } catch (error) {
-    setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+    if (!hasLiveCache) {
+      setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+    } else {
+      setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
+    }
   }
 }
 

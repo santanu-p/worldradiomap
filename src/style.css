@@ -155,6 +155,36 @@ input:focus-visible {
   line-height: 1.6;
 }
 
+.seo-hub-links {
+  margin-top: 16px;
+}
+
+.seo-hub-label {
+  display: inline-flex;
+  margin-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.seo-hub-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ghost-button,
+.micro-button,
+.segment-button,
+.primary-button,
+.secondary-button,
+.load-more-button,
+.play-toggle,
+.seo-hub-link {
+  text-decoration: none;
+}
+
 .masthead-actions {
   display: flex;
   align-items: center;
@@ -609,6 +639,38 @@ input:focus-visible {
   background: linear-gradient(135deg, var(--accent) 0%, #f2a170 100%);
   color: #fff;
   box-shadow: 0 14px 26px rgba(215, 111, 74, 0.22);
+}
+
+.sound-toggle.is-on {
+  border-color: rgba(77, 127, 114, 0.5);
+  background: linear-gradient(135deg, rgba(77, 127, 114, 0.16), rgba(63, 95, 145, 0.14));
+  box-shadow: 0 14px 26px rgba(63, 95, 145, 0.16);
+}
+
+.spatial-audio-toggle {
+  min-width: 172px;
+}
+
+.spatial-audio-toggle.is-on {
+  border-color: rgba(63, 95, 145, 0.5);
+  background: linear-gradient(135deg, rgba(63, 95, 145, 0.17), rgba(77, 127, 114, 0.14));
+  box-shadow: 0 14px 26px rgba(63, 95, 145, 0.2);
+}
+
+.spatial-audio-toggle.is-360 {
+  border-color: rgba(215, 111, 74, 0.55);
+  background: linear-gradient(135deg, rgba(215, 111, 74, 0.22), rgba(63, 95, 145, 0.2));
+  box-shadow: 0 16px 30px rgba(215, 111, 74, 0.2);
+}
+
+.sound-profile-toggle {
+  min-width: 168px;
+}
+
+.sound-profile-toggle.is-arcade {
+  border-color: rgba(215, 111, 74, 0.52);
+  background: linear-gradient(135deg, rgba(215, 111, 74, 0.2), rgba(63, 95, 145, 0.16));
+  box-shadow: 0 14px 26px rgba(215, 111, 74, 0.18);
 }
 
 .volume-wrap {
