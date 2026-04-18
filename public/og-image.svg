@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">World Radio Atlas</title>
+  <desc id="desc">A social preview image showing a map pin, radio waves, and the World Radio Atlas branding.</desc>
+  <defs>
+    <linearGradient id="bg" x1="80" y1="40" x2="1120" y2="590" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1730"/>
+      <stop offset="0.52" stop-color="#10264c"/>
+      <stop offset="1" stop-color="#08111f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(840 180) rotate(130) scale(320 260)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#27c2c1" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#27c2c1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pin" x1="250" y1="130" x2="470" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffeb9a"/>
+      <stop offset="0.45" stop-color="#ffbb64"/>
+      <stop offset="1" stop-color="#ff6a57"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="650" y1="170" x2="1040" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#11284b" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#0d1c34" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" rx="56" fill="url(#bg)"/>
+  <circle cx="900" cy="180" r="240" fill="url(#glow)"/>
+
+  <g opacity="0.22" stroke="#7ce7ea" stroke-width="2">
+    <path d="M120 480H1080"/>
+    <path d="M150 410H1050"/>
+    <path d="M180 340H1020"/>
+    <path d="M210 270H990"/>
+    <path d="M240 200H960"/>
+    <path d="M280 120V520"/>
+    <path d="M400 120V520"/>
+    <path d="M520 120V520"/>
+    <path d="M640 120V520"/>
+    <path d="M760 120V520"/>
+    <path d="M880 120V520"/>
+  </g>
+
+  <rect x="660" y="134" width="408" height="360" rx="36" fill="url(#panel)" stroke="#69dfe7" stroke-opacity="0.22"/>
+  <text x="706" y="236" fill="#f7fbff" font-family="Inter, Manrope, Arial, sans-serif" font-size="58" font-weight="800">World Radio Atlas</text>
+  <text x="706" y="292" fill="#b9d7f0" font-family="Inter, Manrope, Arial, sans-serif" font-size="30" font-weight="600">Live radio stations on a global map</text>
+  <text x="706" y="344" fill="#8ddfe3" font-family="Inter, Manrope, Arial, sans-serif" font-size="22" font-weight="600">Curated picks · filters · instant playback</text>
+
+  <g transform="translate(228 112)">
+    <path d="M252 0C170 0 104 66 104 148c0 94 82 165 136 208 7 6 17 6 24 0 54-43 136-114 136-208C400 66 334 0 252 0Z" fill="url(#pin)"/>
+    <circle cx="252" cy="148" r="82" fill="#0d1c34"/>
+    <path d="M252 110v44" stroke="#9ef8ff" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="252" cy="172" r="14" fill="#9ef8ff"/>
+    <path d="M212 146c12-20 28-30 40-30s28 10 40 30" fill="none" stroke="#9ef8ff" stroke-width="10" stroke-linecap="round"/>
+    <path d="M190 154c18-32 42-48 62-48s44 16 62 48" fill="none" stroke="#5edce9" stroke-width="9" stroke-linecap="round"/>
+    <path d="M152 76c18 18 32 40 42 66" fill="none" stroke="#fff3cf" stroke-width="12" stroke-linecap="round" opacity="0.28"/>
+  </g>
+
+  <g opacity="0.95" transform="translate(708 396)">
+    <rect width="60" height="14" rx="7" fill="#7ce7ea"/>
+    <rect x="72" y="-18" width="60" height="32" rx="7" fill="#ffb45a"/>
+    <rect x="144" y="-42" width="60" height="56" rx="7" fill="#ff6a57"/>
+    <rect x="216" y="-12" width="60" height="26" rx="7" fill="#7ce7ea"/>
+  </g>
+</svg>

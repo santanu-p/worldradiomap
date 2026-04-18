@@ -1,6 +1,6 @@
 {
-  "name": "World Radio Map",
-  "short_name": "Radio Map",
+  "name": "World Radio Atlas",
+  "short_name": "Atlas",
   "description": "Discover and listen to live radio stations from around the world on an interactive map.",
   "start_url": "/",
   "scope": "/",

@@ -1,4 +1,4 @@
-# World Radio Map - Robots.txt
+# World Radio Atlas - Robots.txt
 # https://worldradioatlas.netlify.app/
 
 # Allow all search engine bots to crawl the site
