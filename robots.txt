@@ -1,5 +1,5 @@
 # World Radio Map - Robots.txt
-# https://worldradiomap.vercel.app/
+# https://worldradioatlas.netlify.app/
 
 # Allow all search engine bots to crawl the site
 User-agent: *
@@ -107,7 +107,7 @@ User-agent: ClaudeBot
 Disallow: /
 
 # Sitemap locations
-Sitemap: https://worldradiomap.vercel.app/sitemap.xml
+Sitemap: https://worldradioatlas.netlify.app/sitemap.xml
 
 # Host directive (for Yandex)
-Host: https://worldradiomap.vercel.app
+Host: https://worldradioatlas.netlify.app
