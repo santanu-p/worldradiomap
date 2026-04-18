@@ -28,6 +28,7 @@ const SPATIAL_AUDIO_LABELS = {
   immersive: 'Immersive',
   field360: '360 field'
 };
+const SPATIAL_AUDIO_RETRY_DELAY_MS = 260;
 const UI_SOUND_PROFILES = {
   soft: {
     label: 'Soft',
@@ -874,6 +875,38 @@ function ensureSpatialAudioGraph() {
   }
 }
 
+function activateSpatialAudioMode(mode = state.spatialAudioMode) {
+  if (mode === 'off') {
+    applySpatialAudioMode('off');
+    return true;
+  }
+
+  const spatialReady = ensureSpatialAudioGraph();
+  if (!spatialReady) return false;
+
+  applySpatialAudioMode(mode);
+  return true;
+}
+
+function scheduleSpatialAudioRetry(mode = state.spatialAudioMode) {
+  let resolved = false;
+
+  const retry = () => {
+    if (resolved) return;
+    if (state.spatialAudioMode !== mode || mode === 'off') {
+      resolved = true;
+      return;
+    }
+
+    if (activateSpatialAudioMode(mode)) {
+      resolved = true;
+    }
+  };
+
+  window.setTimeout(retry, SPATIAL_AUDIO_RETRY_DELAY_MS);
+  audio.addEventListener('playing', retry, { once: true });
+}
+
 function scheduleUiTone(context, startTime, {
   frequency,
   endFrequency,
@@ -1631,11 +1664,9 @@ function playStation(station) {
   audio.src = station.url;
 
   if (state.spatialAudioMode !== 'off') {
-    const spatialReady = ensureSpatialAudioGraph();
-    if (spatialReady) {
-      applySpatialAudioMode(state.spatialAudioMode);
-    } else {
-      showToast('Spatial audio could not initialize yet. Continuing in stereo for now.');
+    const spatialReady = activateSpatialAudioMode(state.spatialAudioMode);
+    if (!spatialReady) {
+      scheduleSpatialAudioRetry(state.spatialAudioMode);
     }
   }
 
@@ -1644,6 +1675,12 @@ function playStation(station) {
       state.isPlaying = true;
       refs.playPauseBtn.textContent = 'Pause';
       refs.trackStats.textContent = `${station.tags || 'Signal ready'} · streaming now`;
+      if (state.spatialAudioMode !== 'off') {
+        const spatialReady = activateSpatialAudioMode(state.spatialAudioMode);
+        if (!spatialReady) {
+          scheduleSpatialAudioRetry(state.spatialAudioMode);
+        }
+      }
       playUiSuccessCue();
     })
     .catch(() => {
@@ -1728,31 +1765,30 @@ function bindEvents() {
     const currentIndex = SPATIAL_AUDIO_MODES.indexOf(state.spatialAudioMode);
     const nextMode = SPATIAL_AUDIO_MODES[(currentIndex + 1) % SPATIAL_AUDIO_MODES.length] || 'off';
 
-    if (nextMode !== 'off') {
-      const hasStreamSource = Boolean(audio.currentSrc || audio.src);
-      if (!hasStreamSource) {
-        state.spatialAudioMode = nextMode;
-        writeSpatialAudioPreference(nextMode);
-        syncSpatialAudioToggle();
-        showToast(`Spatial audio ${SPATIAL_AUDIO_LABELS[nextMode]} is armed. Start a station to activate.`);
-        return;
-      }
-
-      const spatialReady = ensureSpatialAudioGraph();
-      if (!spatialReady) {
-        state.spatialAudioMode = nextMode;
-        writeSpatialAudioPreference(nextMode);
-        syncSpatialAudioToggle();
-        showToast('Spatial audio setup is pending. It will retry when playback starts.');
-        return;
-      }
-    }
-
     state.spatialAudioMode = nextMode;
     writeSpatialAudioPreference(nextMode);
     syncSpatialAudioToggle();
-    applySpatialAudioMode(nextMode);
-    showToast(`Spatial audio set to ${SPATIAL_AUDIO_LABELS[nextMode]}.`);
+
+    if (nextMode === 'off') {
+      applySpatialAudioMode('off');
+      showToast(`Spatial audio set to ${SPATIAL_AUDIO_LABELS.off}.`);
+      return;
+    }
+
+    const hasStreamSource = Boolean(audio.currentSrc || audio.src);
+    if (!hasStreamSource) {
+      showToast(`Spatial audio ${SPATIAL_AUDIO_LABELS[nextMode]} is armed. Start a station to activate.`);
+      return;
+    }
+
+    const spatialReady = activateSpatialAudioMode(nextMode);
+    if (spatialReady) {
+      showToast(`Spatial audio set to ${SPATIAL_AUDIO_LABELS[nextMode]}.`);
+      return;
+    }
+
+    showToast('Initializing spatial audio...');
+    scheduleSpatialAudioRetry(nextMode);
   });
 
   document.addEventListener('click', (event) => {
