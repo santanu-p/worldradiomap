@@ -17,6 +17,7 @@ let markerLoadSequence = 0;
 let filterRequestToken = 0;
 let isMobile = false;
 let isLowPowerMode = false;
+let datasetMode = 'curated';
 
 // Detect mobile and low power mode
 function detectDeviceCapabilities() {
@@ -25,6 +26,14 @@ function detectDeviceCapabilities() {
     isLowPowerMode = isMobile || (navigator.deviceMemory && navigator.deviceMemory < 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4);
 }
 detectDeviceCapabilities();
+function updateChromeOffset() {
+    const headerElement = document.querySelector('.header');
+    if (!headerElement) return;
+
+    const headerBottom = Math.ceil(headerElement.getBoundingClientRect().bottom);
+    const chromeTop = Math.max(72, headerBottom + 14);
+    document.documentElement.style.setProperty('--chrome-top', `${chromeTop}px`);
+}
 const ATMOS_STORAGE_KEY = 'wrm-atmos-enabled';
 const supportsSpatialAudio = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
 const atmosEngine = {
@@ -158,6 +167,8 @@ const atmosStatusLabel = document.getElementById('atmosStatus');
 // Set initial volume
 audioPlayer.crossOrigin = 'anonymous';
 audioPlayer.volume = 0.7;
+audioPlayer.preload = 'none';
+audioPlayer.playsInline = true;
 
 // Create optimized visualizer effects - lighter on mobile
 function createFloatingParticles() {
@@ -563,6 +574,7 @@ async function fetchStations() {
         
         if (cached && cached.length > 0) {
             console.log(`✅ Loaded ${cached.length} stations from cache`);
+            datasetMode = 'live';
             allStations = cached;
             filteredStations = allStations;
             stations = allStations;
@@ -642,6 +654,8 @@ async function fetchStationsFromAPI() {
                 Math.abs(station.geo_lat) <= 90 &&
                 Math.abs(station.geo_long) <= 180
             );
+
+            datasetMode = 'live';
             
             filteredStations = allStations;
             console.log(`${allStations.length} valid stations with coordinates`);
@@ -665,6 +679,7 @@ async function fetchStationsFromAPI() {
                 allStations = getDemoStations();
                 filteredStations = allStations;
                 stations = allStations;
+                datasetMode = 'offline';
                 
                 loading.innerHTML = `
                     <div style="text-align: center; padding: 20px; background: rgba(255,165,0,0.1); border-radius: 10px;">
@@ -1036,6 +1051,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 
 function primeFeaturedExperience() {
     if (!FEATURED_STATIONS.length) return;
+    datasetMode = 'curated';
     if (loading) {
         loading.classList.add('active');
         loading.innerHTML = '<div class="spinner"></div>Connecting to the live radio directory...';
@@ -1068,6 +1084,8 @@ function registerUIBindings() {
         clearFiltersBtn.addEventListener('click', () => {
             activeFilterKey = 'all';
             setActiveFilterChip('all');
+            clearTimeout(searchTimeout);
+            syncSearchInputs('');
             applyQuickFilter('all');
         });
     }
@@ -1108,6 +1126,7 @@ function registerUIBindings() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             detectDeviceCapabilities();
+            updateChromeOffset();
             if (!isMobileViewport()) {
                 closeMobileMapPanel();
             }
@@ -1137,6 +1156,15 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function syncSearchInputs(value) {
+    if (searchInput && searchInput.value !== value) {
+        searchInput.value = value;
+    }
+    if (searchInputMobile && searchInputMobile.value !== value) {
+        searchInputMobile.value = value;
+    }
 }
 
 // Play station by ID (called from popup)
@@ -1263,7 +1291,7 @@ searchStationsMobile.addEventListener('click', () => {
 
 // Mobile search input
 searchInputMobile.addEventListener('input', () => {
-    searchInput.value = searchInputMobile.value;
+    syncSearchInputs(searchInputMobile.value);
     searchStations();
 });
 
@@ -1344,19 +1372,28 @@ function updateMapMarkers(stationsToShow) {
 }
 
 document.getElementById('searchBtn').addEventListener('click', searchStations);
-searchInput.addEventListener('input', searchStations);
+searchInput.addEventListener('input', () => {
+    syncSearchInputs(searchInput.value);
+    searchStations();
+});
 
 // Update stats
 function updateStats(isPreview = false) {
     const safeStations = allStations || [];
     const countries = [...new Set(safeStations.map(s => s.country).filter(Boolean))];
     const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(2);
+    const modeLabel = datasetMode === 'live'
+        ? 'Live directory'
+        : datasetMode === 'offline'
+            ? 'Offline fallback'
+            : 'Curated preview';
     const statsNode = document.getElementById('statsContent');
     const loadNode = document.getElementById('loadTime');
     if (statsNode) {
         statsNode.innerHTML = `
             Stations: ${safeStations.length.toLocaleString()}<br>
-            Countries: ${countries.length}
+            Countries: ${countries.length}<br>
+            Mode: ${modeLabel}
         `;
     }
     if (loadNode) {
@@ -1368,6 +1405,11 @@ function updateStats(isPreview = false) {
 window.addEventListener('DOMContentLoaded', () => {
     // Re-detect device on load
     detectDeviceCapabilities();
+    updateChromeOffset();
+    requestAnimationFrame(updateChromeOffset);
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(updateChromeOffset).catch(() => {});
+    }
     
     // Defer non-critical initialization on mobile
     initMap();
