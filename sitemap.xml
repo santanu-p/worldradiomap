@@ -7,7 +7,7 @@
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
         <image:image>
-            <image:loc>https://worldradioatlas.netlify.app/og-image.svg</image:loc>
+            <image:loc>https://worldradioatlas.netlify.app/og-image.png</image:loc>
             <image:title>World Radio Atlas - Live Radio Stations on a Global Map</image:title>
             <image:caption>Discover live radio stations from around the world on an interactive map</image:caption>
         </image:image>
