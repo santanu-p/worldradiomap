@@ -211,6 +211,13 @@ const state = {
   baseLayers: {}
 };
 
+const FILTER_KEYS = new Set(filterGroups.map((group) => group.key));
+const REGION_KEYS = new Set(Object.keys(regionBounds));
+const HASH_ALIASES = {
+  electronic: 'ambient',
+  top: 'all'
+};
+
 if ('serviceWorker' in navigator) {
   // Clean up legacy registration so old cache-first behavior cannot keep stale bundles alive.
   window.addEventListener('load', () => {
@@ -285,6 +292,58 @@ function formatTags(rawTags, maxLength = 96) {
   if (!normalized) return 'No tags';
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength - 1).trim()}...`;
+}
+
+function getHashSelection(hashValue = window.location.hash) {
+  const rawValue = String(hashValue || '').replace(/^#/, '').trim();
+  if (!rawValue) return null;
+
+  let normalized = rawValue.toLowerCase();
+  try {
+    normalized = decodeURIComponent(rawValue).toLowerCase();
+  } catch {
+    // Keep the normalized raw value when decoding fails.
+  }
+
+  const key = HASH_ALIASES[normalized] || normalized;
+  if (FILTER_KEYS.has(key)) {
+    return { type: 'filter', key };
+  }
+
+  if (REGION_KEYS.has(key)) {
+    return { type: 'region', key };
+  }
+
+  return null;
+}
+
+function applyHashSelection(hashValue = window.location.hash) {
+  const selection = getHashSelection(hashValue);
+  if (!selection) return false;
+
+  state.visibleCount = 18;
+
+  if (selection.type === 'filter') {
+    state.activeFilter = selection.key;
+    state.activeRegion = 'world';
+
+    if (selection.key === 'nearby') {
+      renderFilterChips();
+      renderRegionChips();
+      applyNearbyFilter();
+      return true;
+    }
+
+    applyFilters();
+    jumpToRegion('world');
+    return true;
+  }
+
+  state.activeFilter = 'all';
+  state.activeRegion = selection.key;
+  applyFilters();
+  jumpToRegion(selection.key);
+  return true;
 }
 
 function setStatus(message, tone = 'neutral') {
@@ -936,26 +995,39 @@ function bindEvents() {
       }
     }, 160);
   }, { passive: true });
+
+  window.addEventListener('hashchange', () => {
+    applyHashSelection(window.location.hash);
+  });
 }
 
 async function boot() {
   initializeMap();
   bindEvents();
-  renderAll();
-  jumpToRegion('world');
-  window.setTimeout(() => map?.invalidateSize(), 120);
 
   setMode('preview', 'Exploring a curated preview while the live directory loads.');
+
+  const hasDeepLinkSelection = applyHashSelection(window.location.hash);
+  if (!hasDeepLinkSelection) {
+    renderAll();
+    jumpToRegion('world');
+  }
+
+  window.setTimeout(() => map?.invalidateSize(), 120);
 
   try {
     const liveStations = await getLiveStations();
     if (liveStations.length) {
       state.allStations = liveStations;
       state.featuredStations = liveStations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
-      state.filteredStations = liveStations.slice();
       state.visibleCount = 18;
       setMode('live', `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`);
-      renderAll();
+
+      if (state.activeFilter === 'nearby') {
+        applyNearbyFilter();
+      } else {
+        applyFilters();
+      }
     } else {
       setMode('preview', 'Live lookup failed, so the curated preview stays active.');
     }
