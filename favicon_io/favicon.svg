@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">World Radio Atlas Favicon</title>
+  <desc id="desc">A map pin with radio waves on a deep blue atmospheric background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="48" y1="36" x2="460" y2="476" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#11233b"/>
+      <stop offset="1" stop-color="#0a1323"/>
+    </linearGradient>
+    <radialGradient id="ambient" cx="0" cy="0" r="1" gradientTransform="translate(334 164) rotate(128.6) scale(336 296)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#27c2c1" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#27c2c1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pin" x1="155" y1="92" x2="362" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd061"/>
+      <stop offset="0.52" stop-color="#ff9852"/>
+      <stop offset="1" stop-color="#ff5b4f"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="356" cy="144" r="194" fill="url(#ambient)"/>
+
+  <path d="M256 82C174 82 108 148 108 230C108 324 190 395 244 438C251 444 261 444 268 438C322 395 404 324 404 230C404 148 338 82 256 82Z" fill="url(#pin)"/>
+  <circle cx="256" cy="230" r="84" fill="#0a1c31"/>
+
+  <path d="M256 190V244" stroke="#97f6ff" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="256" cy="262" r="14" fill="#97f6ff"/>
+  <path d="M218 228C229 211 242 203 256 203C270 203 283 211 294 228" stroke="#97f6ff" stroke-width="11" stroke-linecap="round" fill="none"/>
+  <path d="M198 237C214 213 234 198 256 198C278 198 298 213 314 237" stroke="#55d8ea" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+  <path d="M176 173C190 137 219 113 255 106" stroke="#fff4d5" stroke-width="12" stroke-linecap="round" opacity="0.38"/>
+</svg>
