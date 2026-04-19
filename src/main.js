@@ -164,6 +164,7 @@ const UI_SOUND_PROFILES = {
   }
 };
 const LIVE_STATION_QUERY = `json/stations/search?order=votes&reverse=true&has_geo_info=true&hidebroken=true&limit=${LIVE_STATION_LIMIT}`;
+const MAP_TILE_ALT_TEXT = 'World map tile';
 const API_ENDPOINTS = [
   `https://all.api.radio-browser.info/${LIVE_STATION_QUERY}`,
   `https://de1.api.radio-browser.info/${LIVE_STATION_QUERY}`,
@@ -1418,6 +1419,27 @@ function showToast(message) {
   }, 2600);
 }
 
+function applyTileAltText(tileImage) {
+  if (!(tileImage instanceof HTMLImageElement)) return;
+  tileImage.alt = MAP_TILE_ALT_TEXT;
+}
+
+function enforceTileAltTextOnLayer(tileLayer) {
+  tileLayer.on('tileloadstart', (event) => {
+    applyTileAltText(event.tile);
+  });
+
+  tileLayer.on('tileload', (event) => {
+    applyTileAltText(event.tile);
+  });
+}
+
+function sweepMapTileAltText() {
+  refs.map?.querySelectorAll('.leaflet-tile').forEach((tile) => {
+    applyTileAltText(tile);
+  });
+}
+
 function initializeMap() {
   const defaultView = regionBounds.world;
   map = L.map(refs.map, {
@@ -1431,7 +1453,9 @@ function initializeMap() {
   }).setView(defaultView.center, defaultView.zoom);
 
   Object.entries(mapStyles).forEach(([key, style]) => {
-    state.baseLayers[key] = L.tileLayer(style.url, style.options);
+    const tileLayer = L.tileLayer(style.url, style.options);
+    enforceTileAltTextOnLayer(tileLayer);
+    state.baseLayers[key] = tileLayer;
   });
 
   clusterLayer = L.markerClusterGroup({
@@ -1450,6 +1474,8 @@ function initializeMap() {
 
   state.baseLayers.paper.addTo(map);
   map.addLayer(clusterLayer);
+  map.on('zoomend moveend layeradd', sweepMapTileAltText);
+  window.setTimeout(sweepMapTileAltText, 0);
 }
 
 function applyMapStyle(styleKey) {
