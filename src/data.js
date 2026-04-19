@@ -28,7 +28,8 @@ export const mapStyles = {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 19,
-      detectRetina: true
+      detectRetina: true,
+      alt: 'Map tile'
     }
   },
   night: {
@@ -38,7 +39,8 @@ export const mapStyles = {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 19,
-      detectRetina: true
+      detectRetina: true,
+      alt: 'Map tile'
     }
   },
   satellite: {
@@ -46,7 +48,8 @@ export const mapStyles = {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     options: {
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye',
-      maxZoom: 18
+      maxZoom: 18,
+      alt: 'Map tile'
     }
   }
 };
