@@ -11,6 +11,8 @@ import {
   mapStyles,
   regionBounds
 } from './data.js';
+import { smoothAudioParam } from './audioUtils.js';
+import { resolveCityVideoForStation } from './cityVideos.js';
 
 const LIVE_STATION_LIMIT = 3000;
 const LIVE_FETCH_TIMEOUT_MS = 22000;
@@ -29,6 +31,7 @@ const SPATIAL_AUDIO_LABELS = {
   field360: '360 field'
 };
 const SPATIAL_AUDIO_RETRY_DELAY_MS = 260;
+const MAP_PANEL_VIEWS = ['map', 'video'];
 const UI_SOUND_PROFILES = {
   soft: {
     label: 'Soft',
@@ -180,7 +183,7 @@ app.innerHTML = `
       <div class="brand">
         <span class="eyebrow">Broadcast atlas / live radio</span>
         <h1>World Radio Atlas</h1>
-        <p>Curated signals, live discovery, and a map-first layout built from scratch for faster browsing and clearer listening.</p>
+        <p>A map-led listening desk for scanning live stations by geography, mood, and broadcast character without losing your place.</p>
         <nav class="seo-hub-links" aria-label="Indexable landing pages">
           <span class="seo-hub-label">Browse landing pages</span>
           <div class="seo-hub-row">
@@ -201,9 +204,10 @@ app.innerHTML = `
       <aside class="rail rail-left">
         <section class="panel search-panel">
           <div class="panel-header">
-            <h2>Search the atlas</h2>
+            <h2>Field controls</h2>
             <button class="secondary-button" id="clearFilters" type="button">Reset</button>
           </div>
+          <p class="helper-copy">Search, narrow the map, then move between regions without resetting the listening flow.</p>
           <div class="search-field">
             <input id="searchInput" class="search-input" type="search" placeholder="Search city, country, station, or genre" aria-label="Search stations">
             <div class="compact-row">
@@ -230,7 +234,7 @@ app.innerHTML = `
             <h2>Featured signals</h2>
             <span class="queue-count"><strong id="featuredCount">0</strong> picks</span>
           </div>
-          <p class="helper-copy">A short curated lane while the live directory loads.</p>
+          <p class="helper-copy">A rotating shortlist of strong stations to start from while the broader directory settles.</p>
           <div class="featured-list" id="featuredList"></div>
         </section>
       </aside>
@@ -240,7 +244,11 @@ app.innerHTML = `
           <div>
             <span class="eyebrow">Signal map</span>
             <h2 id="mapTitle">Global radio field</h2>
-            <p class="map-summary" id="mapSummary">Browse by city, country, or genre. The map will keep the living directory in sync with your filters.</p>
+            <p class="map-summary" id="mapSummary">Browse by city, country, or genre. The map stays in sync with your current filter stack and live directory state.</p>
+            <div class="map-view-switch" id="mapViewSwitch" role="group" aria-label="Map panel view">
+              <button class="segment-button map-view-button active" data-stage-view="map" type="button" aria-pressed="true">Map</button>
+              <button class="segment-button map-view-button" data-stage-view="video" type="button" aria-pressed="false">City video</button>
+            </div>
           </div>
           <div class="map-stats">
             <div class="mini-stat">
@@ -257,14 +265,24 @@ app.innerHTML = `
             </div>
           </div>
         </div>
-        <div class="map-stage">
+        <div class="map-stage" id="mapStage">
           <div id="map"></div>
-          <div class="map-overlay">
-            <p id="statusMessage">Exploring a curated preview while the live directory loads.</p>
-            <div class="map-overlay-hints" aria-hidden="true">
-              <span>Tap markers</span>
-              <span>Search by location</span>
-              <span>Clustered map</span>
+          <div class="video-stage" id="videoStage" hidden>
+            <iframe id="cityVideoFrame" class="city-video-frame" title="City video" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen hidden></iframe>
+            <article class="video-empty" id="videoEmpty">
+              <h3 id="videoEmptyTitle">Select a station to watch city video</h3>
+              <p id="videoEmptyMeta">Choose a station, then switch to Video to watch a related city clip.</p>
+            </article>
+          </div>
+          <div class="map-overlay" id="mapOverlay">
+            <button class="map-overlay-toggle" id="mapOverlayToggle" type="button" aria-expanded="true" aria-controls="mapOverlayCard">Hide guide</button>
+            <div class="map-overlay-card" id="mapOverlayCard">
+              <p id="statusMessage">Exploring a curated preview while the live directory loads.</p>
+              <div class="map-overlay-hints" aria-hidden="true">
+                <span>Tap markers</span>
+                <span>Search by location</span>
+                <span>Clustered map</span>
+              </div>
             </div>
           </div>
         </div>
@@ -273,7 +291,7 @@ app.innerHTML = `
       <aside class="rail rail-right">
         <section class="panel now-playing-panel">
           <div class="panel-header">
-            <h2>Now playing</h2>
+            <h2>Signal desk</h2>
             <span class="tiny-badge" id="liveBadge">Preview</span>
           </div>
           <div class="now-playing-card">
@@ -304,6 +322,7 @@ app.innerHTML = `
             <h2>Station index</h2>
             <button class="load-more-button" id="loadMoreBtn" type="button">Load more</button>
           </div>
+          <p class="helper-copy">A running station ledger ordered for quick scanning while keeping playback one tap away.</p>
           <div class="queue-tools">
             <span class="queue-count"><strong id="visibleCount">0</strong> visible</span>
             <span class="queue-count"><strong id="modeBadge">Preview</strong></span>
@@ -336,6 +355,15 @@ const refs = {
   modeLabel: document.querySelector('#modeLabel'),
   mapTitle: document.querySelector('#mapTitle'),
   mapSummary: document.querySelector('#mapSummary'),
+  mapViewSwitch: document.querySelector('#mapViewSwitch'),
+  mapStage: document.querySelector('#mapStage'),
+  mapOverlay: document.querySelector('#mapOverlay'),
+  mapOverlayToggle: document.querySelector('#mapOverlayToggle'),
+  videoStage: document.querySelector('#videoStage'),
+  cityVideoFrame: document.querySelector('#cityVideoFrame'),
+  videoEmpty: document.querySelector('#videoEmpty'),
+  videoEmptyTitle: document.querySelector('#videoEmptyTitle'),
+  videoEmptyMeta: document.querySelector('#videoEmptyMeta'),
   statusMessage: document.querySelector('#statusMessage'),
   liveBadge: document.querySelector('#liveBadge'),
   nowPlayingArt: document.querySelector('#nowPlayingArt'),
@@ -370,6 +398,9 @@ const state = {
   allStations: fallbackStations.slice(),
   featuredStations: fallbackStations.slice(0, 6),
   filteredStations: fallbackStations.slice(),
+  mapPanelView: 'map',
+  selectedCityVideo: null,
+  isMapOverlayCollapsed: false,
   liveCacheUpdatedAt: null,
   spatialAudioMode: 'off',
   spatialAudioReady: false,
@@ -655,6 +686,114 @@ function syncSpatialAudioToggle() {
   refs.spatialAudioToggle.classList.toggle('is-360', state.spatialAudioMode === 'field360');
 }
 
+function syncMapPanelToggle() {
+  if (!refs.mapViewSwitch) return;
+
+  refs.mapViewSwitch.querySelectorAll('[data-stage-view]').forEach((button) => {
+    const isActive = button.dataset.stageView === state.mapPanelView;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
+function syncMapOverlayState() {
+  if (!refs.mapOverlay || !refs.mapOverlayToggle) return;
+
+  refs.mapOverlay.classList.toggle('is-collapsed', state.isMapOverlayCollapsed);
+  refs.mapOverlayToggle.setAttribute('aria-expanded', String(!state.isMapOverlayCollapsed));
+  refs.mapOverlayToggle.textContent = state.isMapOverlayCollapsed ? 'Show guide' : 'Hide guide';
+}
+
+function setMapOverlayCollapsed(collapsed) {
+  state.isMapOverlayCollapsed = Boolean(collapsed);
+  syncMapOverlayState();
+}
+
+function collapseMapOverlay() {
+  if (state.mapPanelView !== 'map' || state.isMapOverlayCollapsed) return;
+  setMapOverlayCollapsed(true);
+}
+
+function getStationLocationLabel(station) {
+  if (!station) return 'this location';
+
+  const locality = station.city || station.state || '';
+  return locality ? `${locality}, ${station.country}` : station.country || 'this location';
+}
+
+function clearCityVideoFrame() {
+  if (!refs.cityVideoFrame) return;
+
+  if (refs.cityVideoFrame.dataset.activeSrc) {
+    refs.cityVideoFrame.src = 'about:blank';
+    refs.cityVideoFrame.dataset.activeSrc = '';
+  }
+
+  refs.cityVideoFrame.hidden = true;
+}
+
+function renderCityVideoPane(station = getSelectedStation()) {
+  if (!refs.videoEmpty || !refs.videoEmptyTitle || !refs.videoEmptyMeta || !refs.cityVideoFrame) {
+    return;
+  }
+
+  if (!station) {
+    refs.videoEmpty.hidden = false;
+    refs.videoEmptyTitle.textContent = 'Select a station to watch city video';
+    refs.videoEmptyMeta.textContent = 'Choose a station, then switch to Video to watch a related city clip.';
+    clearCityVideoFrame();
+    return;
+  }
+
+  const video = state.selectedCityVideo || resolveCityVideoForStation(station);
+  state.selectedCityVideo = video;
+
+  if (!video?.embedUrl) {
+    refs.videoEmpty.hidden = false;
+    refs.videoEmptyTitle.textContent = `No curated video available for ${getStationLocationLabel(station)}`;
+    refs.videoEmptyMeta.textContent = 'Try another station or switch back to Map to continue browsing.';
+    clearCityVideoFrame();
+    return;
+  }
+
+  refs.videoEmpty.hidden = true;
+  refs.cityVideoFrame.hidden = false;
+  refs.cityVideoFrame.title = video.title || `City video for ${getStationLocationLabel(station)}`;
+
+  if (refs.cityVideoFrame.dataset.activeSrc !== video.embedUrl) {
+    refs.cityVideoFrame.src = video.embedUrl;
+    refs.cityVideoFrame.dataset.activeSrc = video.embedUrl;
+  }
+}
+
+function setMapPanelView(view, { quiet = false } = {}) {
+  const nextView = MAP_PANEL_VIEWS.includes(view) ? view : 'map';
+  state.mapPanelView = nextView;
+
+  syncMapPanelToggle();
+  refs.mapStage?.classList.toggle('is-video', nextView === 'video');
+
+  if (refs.videoStage) {
+    refs.videoStage.hidden = nextView !== 'video';
+  }
+
+  if (nextView === 'video') {
+    setMapOverlayCollapsed(true);
+    renderCityVideoPane();
+    if (!quiet) {
+      showToast('City video view enabled.');
+    }
+    return;
+  }
+
+  clearCityVideoFrame();
+  setMapOverlayCollapsed(false);
+  if (!quiet) {
+    showToast('Map view enabled.');
+  }
+  window.setTimeout(() => map?.invalidateSize(), 140);
+}
+
 function markUserInteraction() {
   if (state.hasUserInteracted) return;
 
@@ -747,14 +886,6 @@ function createStereoPanNode(context, panValue) {
   return context.createGain();
 }
 
-function smoothAudioParam(param, value, ramp = 0.05) {
-  const now = param.context.currentTime;
-  const currentValue = Number.isFinite(param.value) ? param.value : value;
-  param.cancelScheduledValues(now);
-  param.setValueAtTime(currentValue, now);
-  param.linearRampToValueAtTime(value, now + ramp);
-}
-
 function setSpatialPan(node, value) {
   if (!node?.pan) return;
   node.pan.setValueAtTime(value, node.context.currentTime);
@@ -767,33 +898,33 @@ function applySpatialAudioMode(mode) {
 
   switch (mode) {
     case 'immersive':
-      smoothAudioParam(streamDryGain.gain, 0.86, 0.06);
-      smoothAudioParam(streamWetGain.gain, 0.24, 0.06);
-      smoothAudioParam(streamTapGainA.gain, 0.12, 0.06);
-      smoothAudioParam(streamTapGainB.gain, 0.14, 0.06);
-      smoothAudioParam(streamWetFilter.frequency, 4400, 0.08);
+      smoothAudioParam(streamDryGain.gain, 0.86, 0.06, streamAudioContext);
+      smoothAudioParam(streamWetGain.gain, 0.24, 0.06, streamAudioContext);
+      smoothAudioParam(streamTapGainA.gain, 0.12, 0.06, streamAudioContext);
+      smoothAudioParam(streamTapGainB.gain, 0.14, 0.06, streamAudioContext);
+      smoothAudioParam(streamWetFilter.frequency, 4400, 0.08, streamAudioContext);
       streamTapDelayA.delayTime.setValueAtTime(0.015, streamAudioContext.currentTime);
       streamTapDelayB.delayTime.setValueAtTime(0.022, streamAudioContext.currentTime);
       setSpatialPan(streamTapPanA, -0.5);
       setSpatialPan(streamTapPanB, 0.5);
       break;
     case 'field360':
-      smoothAudioParam(streamDryGain.gain, 0.74, 0.06);
-      smoothAudioParam(streamWetGain.gain, 0.34, 0.06);
-      smoothAudioParam(streamTapGainA.gain, 0.2, 0.06);
-      smoothAudioParam(streamTapGainB.gain, 0.22, 0.06);
-      smoothAudioParam(streamWetFilter.frequency, 3600, 0.08);
+      smoothAudioParam(streamDryGain.gain, 0.74, 0.06, streamAudioContext);
+      smoothAudioParam(streamWetGain.gain, 0.34, 0.06, streamAudioContext);
+      smoothAudioParam(streamTapGainA.gain, 0.2, 0.06, streamAudioContext);
+      smoothAudioParam(streamTapGainB.gain, 0.22, 0.06, streamAudioContext);
+      smoothAudioParam(streamWetFilter.frequency, 3600, 0.08, streamAudioContext);
       streamTapDelayA.delayTime.setValueAtTime(0.019, streamAudioContext.currentTime);
       streamTapDelayB.delayTime.setValueAtTime(0.028, streamAudioContext.currentTime);
       setSpatialPan(streamTapPanA, -0.78);
       setSpatialPan(streamTapPanB, 0.78);
       break;
     default:
-      smoothAudioParam(streamDryGain.gain, 1, 0.05);
-      smoothAudioParam(streamWetGain.gain, 0, 0.05);
-      smoothAudioParam(streamTapGainA.gain, 0, 0.05);
-      smoothAudioParam(streamTapGainB.gain, 0, 0.05);
-      smoothAudioParam(streamWetFilter.frequency, 5200, 0.06);
+      smoothAudioParam(streamDryGain.gain, 1, 0.05, streamAudioContext);
+      smoothAudioParam(streamWetGain.gain, 0, 0.05, streamAudioContext);
+      smoothAudioParam(streamTapGainA.gain, 0, 0.05, streamAudioContext);
+      smoothAudioParam(streamTapGainB.gain, 0, 0.05, streamAudioContext);
+      smoothAudioParam(streamWetFilter.frequency, 5200, 0.06, streamAudioContext);
       streamTapDelayA.delayTime.setValueAtTime(0.015, streamAudioContext.currentTime);
       streamTapDelayB.delayTime.setValueAtTime(0.022, streamAudioContext.currentTime);
       setSpatialPan(streamTapPanA, -0.5);
@@ -1475,6 +1606,8 @@ function initializeMap() {
   state.baseLayers.paper.addTo(map);
   map.addLayer(clusterLayer);
   map.on('zoomend moveend layeradd', sweepMapTileAltText);
+  map.on('click zoomstart dragstart', collapseMapOverlay);
+  clusterLayer.on('clusterclick click', collapseMapOverlay);
   window.setTimeout(sweepMapTileAltText, 0);
 }
 
@@ -1507,6 +1640,10 @@ function getSelectedStation() {
 }
 
 function focusMapView() {
+  if (state.mapPanelView !== 'map') {
+    setMapPanelView('map', { quiet: true });
+  }
+
   if (!map) return;
 
   const selectedStation = getSelectedStation();
@@ -1656,6 +1793,7 @@ async function applyNearbyFilter() {
 function selectStation(station, shouldAutoplay = false) {
   const formattedTags = formatTags(station.tags, 90);
   state.selectedId = station.id;
+  state.selectedCityVideo = resolveCityVideoForStation(station);
   refs.nowPlayingArt.textContent = station.name
     .split(' ')
     .slice(0, 2)
@@ -1676,6 +1814,10 @@ function selectStation(station, shouldAutoplay = false) {
 
   if (map && Number.isFinite(station.lat) && Number.isFinite(station.lng)) {
     map.flyTo([station.lat, station.lng], Math.max(map.getZoom(), 5), { duration: 0.8 });
+  }
+
+  if (state.mapPanelView === 'video') {
+    renderCityVideoPane(station);
   }
 
   if (shouldAutoplay) {
@@ -1815,6 +1957,16 @@ function bindEvents() {
 
     showToast('Initializing spatial audio...');
     scheduleSpatialAudioRetry(nextMode);
+  });
+
+  refs.mapViewSwitch.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-stage-view]');
+    if (!button) return;
+    setMapPanelView(button.dataset.stageView);
+  });
+
+  refs.mapOverlayToggle?.addEventListener('click', () => {
+    setMapOverlayCollapsed(!state.isMapOverlayCollapsed);
   });
 
   document.addEventListener('click', (event) => {
@@ -1961,6 +2113,9 @@ async function boot() {
   syncSpatialAudioToggle();
   syncUiSoundToggle();
   syncUiSoundProfileToggle();
+  syncMapPanelToggle();
+  syncMapOverlayState();
+  setMapPanelView('map', { quiet: true });
 
   setMode('preview', 'Exploring a curated preview while the live directory loads.');
 
