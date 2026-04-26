@@ -339,6 +339,7 @@ input:focus-visible {
 
 .masthead-actions {
   display: grid;
+  min-width: 0;
   align-content: end;
   justify-items: end;
   gap: 12px;
@@ -349,6 +350,14 @@ input:focus-visible {
 .tiny-badge {
   user-select: none;
   white-space: nowrap;
+}
+
+.status-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+  text-align: right;
 }
 
 .status-chip,
@@ -669,9 +678,16 @@ input:focus-visible {
 
 .map-head {
   position: relative;
+  display: flex;
+  flex-wrap: wrap;
   z-index: 1;
   padding: 10px 12px 0;
   align-items: end;
+}
+
+.map-head > :first-child {
+  min-width: 0;
+  flex: 1 1 360px;
 }
 
 .map-head .eyebrow,
@@ -712,6 +728,8 @@ input:focus-visible {
 }
 
 .map-stats {
+  max-width: 100%;
+  flex: 0 1 auto;
   justify-content: flex-end;
 }
 
@@ -1069,9 +1087,15 @@ input:focus-visible {
     top: 22px;
     height: calc(100dvh - 44px);
   }
+
+  .map-stage {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
 }
 
-@media (max-width: 1320px) {
+@media (max-width: 1480px) {
   .workspace {
     grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(280px, 330px);
   }
@@ -1108,6 +1132,10 @@ input:focus-visible {
   .masthead-actions {
     justify-items: start;
   }
+
+  .status-chip {
+    text-align: left;
+  }
 }
 
 @media (max-width: 960px) {
@@ -1130,7 +1158,7 @@ input:focus-visible {
   }
 
   .map-stage {
-    min-height: 62vh;
+    min-height: clamp(320px, 52vh, 520px);
   }
 }
 
