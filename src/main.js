@@ -14,9 +14,9 @@ import {
 import { smoothAudioParam } from './audioUtils.js';
 import { resolveCityVideoForStation } from './cityVideos.js';
 
-const LIVE_STATION_LIMIT = 3000;
+const LIVE_STATION_LIMIT = 8000;
 const LIVE_FETCH_TIMEOUT_MS = 22000;
-const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v1';
+const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v2';
 const LIVE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const LIVE_REFRESH_RETRY_DELAY_MS = 1200;
 const UI_SOUND_PREF_KEY = 'world-radio-atlas.ui-sounds.v1';
@@ -179,13 +179,32 @@ const app = document.querySelector('#app');
 
 app.innerHTML = `
   <div class="shell">
+    <nav class="topbar" aria-label="Primary">
+      <a class="brand-mark" href="/" aria-label="World Radio Atlas home">
+        <img class="brand-mark-glyph" src="/favicon_io/favicon.svg" alt="" aria-hidden="true">
+        <span>World Radio Atlas</span>
+      </a>
+      <div class="topbar-links">
+        <button class="topbar-link-button active" data-top-region="world" type="button">World</button>
+        <button class="topbar-link-button" data-top-region="americas" type="button">Americas</button>
+        <button class="topbar-link-button" data-top-region="europe" type="button">Europe</button>
+        <button class="topbar-link-button" data-top-region="asia" type="button">Asia</button>
+        <button class="topbar-link-button" data-top-region="africa" type="button">Africa</button>
+        <button class="topbar-link-button" data-top-region="oceania" type="button">Oceania</button>
+      </div>
+      <button class="ghost-button topbar-refresh" id="refreshStations" type="button">Refresh directory</button>
+    </nav>
+
     <header class="masthead">
       <div class="brand">
         <span class="eyebrow">Broadcast atlas / live radio</span>
         <h1>World Radio Atlas</h1>
-        <p>A map-led listening desk for scanning live stations by geography, mood, and broadcast character without losing your place.</p>
+        <p>Tune into a moving planet of live stations, city video, and spatial audio controls from one cinematic listening desk.</p>
+        <div class="hero-status">
+          <span class="status-chip" id="statusChip">Curated preview ready</span>
+        </div>
         <nav class="seo-hub-links" aria-label="Indexable landing pages">
-          <span class="seo-hub-label">Browse landing pages</span>
+          <span class="seo-hub-label">Quick routes</span>
           <div class="seo-hub-row">
             <a class="ghost-button seo-hub-link" href="/regions/">Regions</a>
             <a class="ghost-button seo-hub-link" href="/genres/">Genres</a>
@@ -195,8 +214,21 @@ app.innerHTML = `
         </nav>
       </div>
       <div class="masthead-actions">
-        <div class="status-chip" id="statusChip">Curated preview ready</div>
-        <button class="ghost-button" id="refreshStations" type="button">Refresh live directory</button>
+        <div class="orbital-console" aria-hidden="true">
+          <div class="orbital-scene">
+            <div class="planet-core">
+              <span class="continent continent-a"></span>
+              <span class="continent continent-b"></span>
+              <span class="continent continent-c"></span>
+            </div>
+            <span class="orbit orbit-a"><i></i></span>
+            <span class="orbit orbit-b"><i></i></span>
+            <span class="orbit orbit-c"><i></i></span>
+            <span class="signal-node node-a"></span>
+            <span class="signal-node node-b"></span>
+            <span class="signal-node node-c"></span>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -339,6 +371,7 @@ app.innerHTML = `
 
 const refs = {
   app,
+  topbarLinks: document.querySelector('.topbar-links'),
   statusChip: document.querySelector('#statusChip'),
   refreshStations: document.querySelector('#refreshStations'),
   clearFilters: document.querySelector('#clearFilters'),
@@ -389,7 +422,7 @@ const state = {
   mode: 'preview',
   activeFilter: 'all',
   activeRegion: 'world',
-  activeStyle: 'paper',
+  activeStyle: 'night',
   query: '',
   visibleCount: 18,
   selectedId: '',
@@ -1405,6 +1438,15 @@ function renderRegionChips() {
   refs.regionChips.innerHTML = regions.map((region) => `
     <button class="segment-button ${state.activeRegion === region.key ? 'active' : ''}" data-region="${region.key}" type="button">${region.label}</button>
   `).join('');
+  syncTopbarRegionButtons();
+}
+
+function syncTopbarRegionButtons() {
+  refs.topbarLinks?.querySelectorAll('[data-top-region]').forEach((button) => {
+    const isActive = button.dataset.topRegion === state.activeRegion;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
 }
 
 function renderStyleChips() {
@@ -1603,7 +1645,7 @@ function initializeMap() {
     }
   });
 
-  state.baseLayers.paper.addTo(map);
+  state.baseLayers[state.activeStyle].addTo(map);
   map.addLayer(clusterLayer);
   map.on('zoomend moveend layeradd', sweepMapTileAltText);
   map.on('click zoomstart dragstart', collapseMapOverlay);
@@ -1909,6 +1951,20 @@ function bindEvents() {
   window.addEventListener('pointerdown', markUserInteraction, { passive: true });
   window.addEventListener('keydown', markUserInteraction, { passive: true });
 
+  refs.topbarLinks?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-top-region]');
+    if (!button) return;
+    state.activeRegion = button.dataset.topRegion;
+    state.activeFilter = 'all';
+    state.query = '';
+    refs.searchInput.value = '';
+    state.visibleCount = 18;
+    renderFilterChips();
+    renderRegionChips();
+    applyFilters();
+    jumpToRegion(state.activeRegion);
+  });
+
   refs.uiSoundToggle.addEventListener('click', () => {
     markUserInteraction();
     state.uiSoundsEnabled = !state.uiSoundsEnabled;
@@ -1976,7 +2032,7 @@ function bindEvents() {
   });
 
   refs.refreshStations.addEventListener('click', async () => {
-    const defaultLabel = 'Refresh live directory';
+    const defaultLabel = 'Refresh directory';
     const hasLiveDataInView = state.mode === 'live' && state.allStations.length > 0;
     refs.refreshStations.textContent = 'Refreshing...';
     setStatus('Refreshing the live directory...');

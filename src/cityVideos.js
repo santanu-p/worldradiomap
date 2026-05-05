@@ -35,6 +35,7 @@ function normalizeCountry(value) {
 // ── YouTube embed builder ───────────────────────────────────────────
 
 const YT_EMBED_BASE = 'https://www.youtube-nocookie.com/embed/';
+const YT_SEARCH_EMBED_BASE = 'https://www.youtube-nocookie.com/embed';
 
 function buildEmbedUrl(videoId) {
   if (!videoId) return '';
@@ -49,6 +50,21 @@ function buildEmbedUrl(videoId) {
     'playsinline=1'
   ].join('&');
   return `${YT_EMBED_BASE}${videoId}?${params}`;
+}
+
+function buildSearchEmbedUrl(query) {
+  if (!query) return '';
+  const params = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    controls: '1',
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    listType: 'search',
+    list: query
+  });
+  return `${YT_SEARCH_EMBED_BASE}?${params.toString()}`;
 }
 
 // ── Curated city → video-ID catalog ─────────────────────────────────
@@ -75,13 +91,13 @@ const CITY_COUNTRY_VIDEOS = {
   'tokyo|japan':                 { id: '28ZjrtD_iL0', title: 'Tokyo 4K HDR Walking Tour — Day & Night' },
   'seoul|south korea':           { id: 'ca9uN3QyDmQ', title: 'Seoul Nightlife 4K Walking Tour' },
   'mumbai|india':                { id: 'dTxIyhunxbI', title: 'Mumbai Drive — Colaba to Bandra 4K HDR' },
-  'delhi|india':                 { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
-  'new delhi|india':             { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
-  'bangalore|india':             { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
-  'bengaluru|india':             { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
-  'kolkata|india':               { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
-  'chennai|india':               { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
-  'hyderabad|india':             { id: 'dTxIyhunxbI', title: 'Mumbai Drive 4K HDR (India fallback)' },
+  'delhi|india':                 { id: 'NEnzX8BVs2E', title: 'New Delhi 4K Walking Tour' },
+  'new delhi|india':             { id: 'NEnzX8BVs2E', title: 'New Delhi 4K Walking Tour' },
+  'bangalore|india':             { query: 'Bangalore India 4K city walking tour', title: 'Bangalore city video search' },
+  'bengaluru|india':             { query: 'Bengaluru India 4K city walking tour', title: 'Bengaluru city video search' },
+  'kolkata|india':               { query: 'Kolkata India 4K city walking tour', title: 'Kolkata city video search' },
+  'chennai|india':               { query: 'Chennai India 4K city walking tour', title: 'Chennai city video search' },
+  'hyderabad|india':             { query: 'Hyderabad India 4K city walking tour', title: 'Hyderabad city video search' },
   'istanbul|turkey':             { id: '1G1pi3LLVqY', title: 'Istanbul Walking Tour 4K' },
   'berlin|germany':              { id: '1qitNAzhxQk', title: 'Berlin Walking Tour 4K' },
   'rome|italy':                  { id: 'x4qv5vCQylo', title: 'Rome Walking Tour 4K 60fps' },
@@ -136,9 +152,9 @@ function buildLocationCandidates(station) {
 }
 
 function resolveEntry(entry) {
-  if (!entry?.id) return null;
+  if (!entry?.id && !entry?.query) return null;
   return {
-    embedUrl: buildEmbedUrl(entry.id),
+    embedUrl: entry.id ? buildEmbedUrl(entry.id) : buildSearchEmbedUrl(entry.query),
     title: entry.title || 'City video',
     matchedBy: 'city-country'
   };

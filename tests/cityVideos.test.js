@@ -14,3 +14,29 @@ test('resolves a country fallback video for stations using "The United States Of
   assert.equal(video.matchedBy, 'country-default');
   assert.match(video.embedUrl, /youtube-nocookie\.com\/embed\//);
 });
+
+test('uses a Kolkata-specific city video search instead of the Mumbai fallback', () => {
+  const video = resolveCityVideoForStation({
+    name: 'Kolkata FM',
+    country: 'India',
+    city: 'Kolkata'
+  });
+
+  assert.ok(video, 'expected a Kolkata video result');
+  assert.equal(video.matchedBy, 'city-country');
+  assert.match(video.embedUrl, /listType=search/);
+  assert.match(video.embedUrl, /Kolkata\+India\+4K\+city\+walking\+tour/);
+  assert.doesNotMatch(video.embedUrl, /dTxIyhunxbI/);
+});
+
+test('resolves Delhi to a Delhi-specific video', () => {
+  const video = resolveCityVideoForStation({
+    name: 'Delhi Radio',
+    country: 'India',
+    city: 'New Delhi'
+  });
+
+  assert.ok(video, 'expected a Delhi video result');
+  assert.equal(video.matchedBy, 'city-country');
+  assert.match(video.embedUrl, /NEnzX8BVs2E/);
+});
