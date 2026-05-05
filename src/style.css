@@ -351,6 +351,20 @@ a:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-left: -19px;
+}
+
+.map-head-copy {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+.map-head-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: stretch;
 }
 
 .masthead-actions {
@@ -676,7 +690,7 @@ a:focus-visible {
 .workspace {
   display: grid;
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(300px, 380px);
-  gap: 18px;
+  gap: 14px;
   align-items: start;
 }
 
@@ -951,7 +965,7 @@ a:focus-visible {
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  padding: 16px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background:
     linear-gradient(180deg, rgba(8, 13, 22, 0.94), rgba(5, 9, 16, 0.92)),
@@ -973,14 +987,39 @@ a:focus-visible {
 }
 
 .map-head {
-  flex-wrap: wrap;
-  align-items: end;
-  padding: 12px 12px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(180px, 24vw, 250px);
+  gap: 10px 14px;
+  align-items: start;
+  padding: 10px 10px 0;
+}
+
+.map-head-copy {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
 }
 
 .map-head > :first-child {
   min-width: 0;
-  flex: 1 1 360px;
+  grid-column: 1;
+}
+
+.map-head-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  align-content: start;
+}
+
+.map-stats {
+  grid-column: 2;
+  align-self: start;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .map-head .eyebrow,
@@ -994,24 +1033,30 @@ a:focus-visible {
 }
 
 .map-summary {
-  margin: 11px 0 0;
-  max-width: 42rem;
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  max-width: none;
   color: var(--ink-muted);
+  font-size: 0.96rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .map-view-switch {
-  margin-top: 18px;
-}
-
-.map-stats {
-  max-width: 100%;
-  flex: 0 1 auto;
-  justify-content: flex-end;
+  margin-top: 0;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: min(100%, 420px);
 }
 
 .mini-stat {
-  min-width: 96px;
-  padding: 13px 14px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.055);
@@ -1020,10 +1065,10 @@ a:focus-visible {
 
 .mini-stat strong {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--ink);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 
@@ -1031,10 +1076,17 @@ a:focus-visible {
   color: var(--ink-muted);
 }
 
+.map-view-button {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+  padding-inline: 12px;
+}
+
 .map-stage {
   position: relative;
-  min-height: clamp(400px, 58vh, 720px);
-  margin-top: 16px;
+  min-height: clamp(340px, 45vh, 600px);
+  margin-top: 8px;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 28px;
   overflow: hidden;
@@ -1410,13 +1462,11 @@ a:focus-visible {
   .map-panel {
     position: sticky;
     top: 86px;
-    height: calc(100dvh - 104px);
+    height: auto;
   }
 
   .map-stage {
-    min-height: 0;
-    height: 100%;
-    max-height: 100%;
+    min-height: clamp(270px, 39vh, 500px);
   }
 }
 
@@ -1498,7 +1548,7 @@ a:focus-visible {
   }
 
   .map-stage {
-    min-height: clamp(340px, 54vh, 560px);
+    min-height: clamp(320px, 50vh, 530px);
   }
 }
 
@@ -1531,28 +1581,40 @@ a:focus-visible {
     font-size: clamp(3.35rem, 17vw, 5.2rem);
   }
 
-  .orbital-console {
-    min-height: 280px;
+  .map-head {
+    grid-template-columns: 1fr;
   }
 
-  .map-head,
-  .panel-header,
-  .now-playing-card,
-  .control-row {
-    flex-direction: column;
-    align-items: stretch;
+  .map-head-copy {
+    gap: 10px;
+  }
+
+  .map-summary,
+  .map-view-switch {
+    grid-column: 1;
   }
 
   .map-stats {
+    grid-column: 1;
     justify-content: start;
+    margin-top: 4px;
+    margin-left: 0;
+    width: 100%;
   }
 
   .map-view-switch {
     width: 100%;
   }
 
-  .map-view-button {
-    flex: 1 1 0;
+  .orbital-console {
+    min-height: 280px;
+  }
+
+  .panel-header,
+  .now-playing-card,
+  .control-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .video-stage {

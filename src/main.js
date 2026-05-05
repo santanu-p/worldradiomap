@@ -181,7 +181,7 @@ app.innerHTML = `
   <div class="shell">
     <nav class="topbar" aria-label="Primary">
       <a class="brand-mark" href="/" aria-label="World Radio Atlas home">
-        <img class="brand-mark-glyph" src="/favicon_io/favicon.svg" alt="" aria-hidden="true">
+        <img class="brand-mark-glyph" src="/favicon.svg" alt="" aria-hidden="true">
         <span>World Radio Atlas</span>
       </a>
       <div class="topbar-links">
@@ -273,34 +273,36 @@ app.innerHTML = `
 
       <section class="map-panel">
         <div class="map-head">
-          <div>
+          <div class="map-head-copy">
             <span class="eyebrow">Signal map</span>
             <h2 id="mapTitle">Global radio field</h2>
-            <p class="map-summary" id="mapSummary">Browse by city, country, or genre. The map stays in sync with your current filter stack and live directory state.</p>
-            <div class="map-view-switch" id="mapViewSwitch" role="group" aria-label="Map panel view">
-              <button class="segment-button map-view-button active" data-stage-view="map" type="button" aria-pressed="true">Map</button>
-              <button class="segment-button map-view-button" data-stage-view="video" type="button" aria-pressed="false">City video</button>
+          </div>
+          <div class="map-head-actions">
+            <div class="map-stats">
+              <div class="mini-stat">
+                <span class="kicker">Stations</span>
+                <strong id="stationCount">0</strong>
+              </div>
+              <div class="mini-stat">
+                <span class="kicker">Countries</span>
+                <strong id="countryCount">0</strong>
+              </div>
+              <div class="mini-stat">
+                <span class="kicker">Mode</span>
+                <strong id="modeLabel">Preview</strong>
+              </div>
             </div>
           </div>
-          <div class="map-stats">
-            <div class="mini-stat">
-              <span class="kicker">Stations</span>
-              <strong id="stationCount">0</strong>
-            </div>
-            <div class="mini-stat">
-              <span class="kicker">Countries</span>
-              <strong id="countryCount">0</strong>
-            </div>
-            <div class="mini-stat">
-              <span class="kicker">Mode</span>
-              <strong id="modeLabel">Preview</strong>
-            </div>
+          <p class="map-summary" id="mapSummary">Browse by city, country, or genre. The map stays in sync with your current filter stack and live directory state.</p>
+          <div class="map-view-switch" id="mapViewSwitch" role="group" aria-label="Map panel view">
+            <button class="segment-button map-view-button active" data-stage-view="map" type="button" aria-pressed="true">Map</button>
+            <button class="segment-button map-view-button" data-stage-view="video" type="button" aria-pressed="false">City video</button>
           </div>
         </div>
         <div class="map-stage" id="mapStage">
           <div id="map"></div>
           <div class="video-stage" id="videoStage" hidden>
-            <iframe id="cityVideoFrame" class="city-video-frame" title="City video" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen hidden></iframe>
+            <iframe id="cityVideoFrame" class="city-video-frame" title="City video" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
             <article class="video-empty" id="videoEmpty">
               <h3 id="videoEmptyTitle">Select a station to watch city video</h3>
               <p id="videoEmptyMeta">Choose a station, then switch to Video to watch a related city clip.</p>
@@ -1316,7 +1318,7 @@ function setStatus(message, tone = 'neutral') {
     refs.statusMessage.textContent = message;
   }
   if (refs.mapSummary && tone === 'live') {
-    refs.mapSummary.textContent = 'The live directory is active. Search, filter, and jump around the atlas to discover stations.';
+    refs.mapSummary.innerHTML = 'The live directory is active.<br>Search, filter, and jump around the atlas to discover stations.';
   }
   if (refs.mapSummary && tone === 'empty') {
     refs.mapSummary.textContent = 'No stations matched this view. Try broadening your query or changing region and genre filters.';
