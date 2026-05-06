@@ -167,6 +167,8 @@ const UI_SOUND_PROFILES = {
   }
 };
 const LIVE_STATION_QUERY = `json/stations/search?order=votes&reverse=true&has_geo_info=true&hidebroken=true&limit=${LIVE_STATION_LIMIT}`;
+const FEATURED_SKELETON_COUNT = 4;
+const STATION_SKELETON_COUNT = 6;
 const MAP_TILE_ALT_TEXT = 'World map tile';
 const API_ENDPOINTS = [
   `https://all.api.radio-browser.info/${LIVE_STATION_QUERY}`,
@@ -214,20 +216,8 @@ app.innerHTML = `
         </nav>
       </div>
       <div class="masthead-actions">
-        <div class="orbital-console" aria-hidden="true">
-          <div class="orbital-scene">
-            <div class="planet-core">
-              <span class="continent continent-a"></span>
-              <span class="continent continent-b"></span>
-              <span class="continent continent-c"></span>
-            </div>
-            <span class="orbit orbit-a"><i></i></span>
-            <span class="orbit orbit-b"><i></i></span>
-            <span class="orbit orbit-c"><i></i></span>
-            <span class="signal-node node-a"></span>
-            <span class="signal-node node-b"></span>
-            <span class="signal-node node-c"></span>
-          </div>
+        <div class="orbital-console globe-hero-shell" aria-hidden="true">
+          <div class="globe-hero-canvas" id="globeHero"></div>
         </div>
       </div>
     </header>
@@ -417,7 +407,8 @@ const refs = {
   modeBadge: document.querySelector('#modeBadge'),
   toast: document.querySelector('#toast'),
   audio: document.querySelector('#playerAudio'),
-  map: document.querySelector('#map')
+  map: document.querySelector('#map'),
+  globeHero: document.querySelector('#globeHero')
 };
 
 const state = {
@@ -445,6 +436,7 @@ const state = {
   lastUiSoundAt: 0,
   renderToken: 0,
   markerToken: 0,
+  isDirectoryLoading: true,
   stationLayers: new Map(),
   baseLayers: {}
 };
@@ -516,6 +508,13 @@ if ('serviceWorker' in navigator) {
         // Ignore cleanup failures.
       });
   }, { once: true });
+}
+
+if (refs.globeHero) {
+  import('./FuturisticGlobe.jsx')
+    .then(({ renderHeroGlobe }) => {
+      renderHeroGlobe(refs.globeHero);
+    });
 }
 
 const audio = refs.audio;
@@ -1213,6 +1212,25 @@ function syncSeoMetadata() {
   updateSeoMetadata(getSeoMetadata());
 }
 
+
+function setDirectoryLoading(isLoading) {
+  state.isDirectoryLoading = isLoading;
+  document.body.classList.toggle('is-directory-loading', isLoading);
+  refs.featuredList?.setAttribute('aria-busy', String(isLoading));
+  refs.stationList?.setAttribute('aria-busy', String(isLoading));
+  refs.map?.setAttribute('aria-busy', String(isLoading));
+}
+
+function getSkeletonCards(count, variant = 'station') {
+  return Array.from({ length: count }, (_, index) => `
+    <article class="skeleton-card skeleton-card-${variant}" aria-hidden="true" style="--skeleton-index: ${index}">
+      <span class="skeleton-line skeleton-line-title"></span>
+      <span class="skeleton-line skeleton-line-meta"></span>
+      <span class="skeleton-line skeleton-line-tags"></span>
+    </article>
+  `).join('');
+}
+
 function updateStatusChip() {
   if (!refs.statusChip) return;
 
@@ -1340,6 +1358,14 @@ function setMode(mode, message) {
 }
 
 function updateStats() {
+  if (state.isDirectoryLoading) {
+    refs.stationCount.textContent = '—';
+    refs.countryCount.textContent = '—';
+    refs.featuredCount.textContent = '—';
+    refs.visibleCount.textContent = '—';
+    return;
+  }
+
   const stations = state.filteredStations;
   const countries = new Set(stations.map((station) => station.country).filter(Boolean));
   refs.stationCount.textContent = stations.length.toLocaleString();
@@ -1349,6 +1375,7 @@ function updateStats() {
 }
 
 function applyLiveDirectory(stations, modeMessage, cacheUpdatedAt = Date.now()) {
+  setDirectoryLoading(false);
   state.liveCacheUpdatedAt = cacheUpdatedAt;
   state.allStations = stations;
   state.featuredStations = stations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
@@ -1458,6 +1485,11 @@ function renderStyleChips() {
 }
 
 function renderFeaturedStations() {
+  if (state.isDirectoryLoading) {
+    refs.featuredList.innerHTML = getSkeletonCards(FEATURED_SKELETON_COUNT, 'featured');
+    return;
+  }
+
   const pool = state.featuredStations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
   refs.featuredList.innerHTML = '';
 
@@ -1481,6 +1513,14 @@ function renderFeaturedStations() {
 }
 
 function renderStationList() {
+  if (state.isDirectoryLoading) {
+    refs.stationList.innerHTML = getSkeletonCards(STATION_SKELETON_COUNT);
+    refs.visibleCount.textContent = '—';
+    refs.loadMoreBtn.disabled = true;
+    refs.loadMoreBtn.hidden = true;
+    return;
+  }
+
   const visibleStations = state.filteredStations.slice(0, state.visibleCount);
 
   if (!visibleStations.length) {
@@ -1519,6 +1559,8 @@ function renderMapMarkers() {
   const token = ++state.markerToken;
   clusterLayer.clearLayers();
   state.stationLayers.clear();
+
+  if (state.isDirectoryLoading) return;
 
   const markers = state.filteredStations.map((station) => {
     const formattedTags = formatTags(station.tags, 86);
@@ -2039,6 +2081,10 @@ function bindEvents() {
     refs.refreshStations.textContent = 'Refreshing...';
     setStatus('Refreshing the live directory...');
     refs.refreshStations.disabled = true;
+    if (!hasLiveDataInView) {
+      setDirectoryLoading(true);
+      renderAll();
+    }
     try {
       const liveStations = await getLiveStationsWithRetry();
       if (liveStations.length) {
@@ -2055,14 +2101,18 @@ function bindEvents() {
         setStatus('Could not refresh right now. Continuing with your cached stations.', 'live');
         showToast('Refresh failed. Still using cached stations.');
       } else {
+        setDirectoryLoading(false);
         setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
+        renderAll();
       }
     } catch (error) {
       if (hasLiveDataInView) {
         setStatus('Could not refresh right now. Continuing with your cached stations.', 'live');
         showToast('Refresh failed. Still using cached stations.');
       } else {
+        setDirectoryLoading(false);
         setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
+        renderAll();
       }
     } finally {
       refs.refreshStations.disabled = false;
@@ -2174,6 +2224,7 @@ async function boot() {
   syncMapPanelToggle();
   syncMapOverlayState();
   setMapPanelView('map', { quiet: true });
+  setDirectoryLoading(true);
 
   setMode('preview', 'Exploring a curated preview while the live directory loads.');
 
@@ -2214,14 +2265,18 @@ async function boot() {
       );
     } else {
       if (!hasLiveCache) {
+        setDirectoryLoading(false);
         setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+        renderAll();
       } else {
         setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
       }
     }
   } catch (error) {
     if (!hasLiveCache) {
+      setDirectoryLoading(false);
       setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+      renderAll();
     } else {
       setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
     }
