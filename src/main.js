@@ -13,6 +13,7 @@ import {
 } from './data.js';
 import { smoothAudioParam } from './audioUtils.js';
 import { resolveCityVideoForStation } from './cityVideos.js';
+import { initGlobe } from './globe.js';
 
 const LIVE_STATION_LIMIT = 8000;
 const LIVE_FETCH_TIMEOUT_MS = 22000;
@@ -417,7 +418,8 @@ const refs = {
   modeBadge: document.querySelector('#modeBadge'),
   toast: document.querySelector('#toast'),
   audio: document.querySelector('#playerAudio'),
-  map: document.querySelector('#map')
+  map: document.querySelector('#map'),
+  orbitalConsole: document.querySelector('.orbital-console')
 };
 
 const state = {
@@ -2162,9 +2164,29 @@ function bindEvents() {
   });
 }
 
+function renderSkeletons() {
+  refs.stationList.innerHTML = Array.from({ length: 8 }).map(() => `
+    <article class="station-item skeleton" style="padding: 16px; border: 1px solid var(--line); border-radius: 12px;">
+      <div class="skeleton-text" style="width: 60%;"></div>
+      <div class="skeleton-text" style="width: 40%; margin-top: 12px;"></div>
+      <div class="skeleton-text" style="width: 80%; margin-top: 8px;"></div>
+    </article>
+  `).join('');
+
+  refs.featuredList.innerHTML = Array.from({ length: 4 }).map(() => `
+    <article class="featured-item skeleton" style="height: 90px; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: center;">
+      <div class="skeleton-text" style="width: 50%;"></div>
+      <div class="skeleton-text" style="width: 70%; margin-top: 8px;"></div>
+    </article>
+  `).join('');
+}
+
 async function boot() {
   initializeMap();
   bindEvents();
+  if (refs.orbitalConsole) {
+    initGlobe(refs.orbitalConsole);
+  }
   state.spatialAudioMode = readSpatialAudioPreference();
   state.uiSoundsEnabled = readUiSoundPreference();
   state.uiSoundProfile = readUiSoundProfilePreference();
@@ -2177,16 +2199,20 @@ async function boot() {
 
   setMode('preview', 'Exploring a curated preview while the live directory loads.');
 
+  const cachedEntry = readCachedLiveStations();
+  const hasLiveCache = Boolean(cachedEntry?.stations?.length);
+
   const hasDeepLinkSelection = applyHashSelection(window.location.hash);
   if (!hasDeepLinkSelection) {
-    renderAll();
-    jumpToRegion('world');
+    if (!hasLiveCache) {
+      renderSkeletons();
+    } else {
+      renderAll();
+      jumpToRegion('world');
+    }
   }
 
   window.setTimeout(() => map?.invalidateSize(), 120);
-
-  const cachedEntry = readCachedLiveStations();
-  const hasLiveCache = Boolean(cachedEntry?.stations?.length);
 
   if (hasLiveCache) {
     applyLiveDirectory(
@@ -2212,9 +2238,14 @@ async function boot() {
           : `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`,
         cachedAt
       );
+      if (!hasDeepLinkSelection && !hasLiveCache) {
+        jumpToRegion('world');
+      }
     } else {
       if (!hasLiveCache) {
         setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+        renderAll();
+        if (!hasDeepLinkSelection) jumpToRegion('world');
       } else {
         setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
       }
@@ -2222,6 +2253,8 @@ async function boot() {
   } catch (error) {
     if (!hasLiveCache) {
       setMode('preview', 'Live lookup failed, so the curated preview stays active.');
+      renderAll();
+      if (!hasDeepLinkSelection) jumpToRegion('world');
     } else {
       setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
     }
