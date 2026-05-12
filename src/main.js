@@ -7,2258 +7,1292 @@ import './style.css';
 import {
   featuredStations,
   fallbackStations,
-  filterGroups,
   mapStyles,
-  regionBounds
+  countryToContinent,
+  countryCentroids,
+  API_SERVERS,
+  cityVideos
 } from './data.js';
-import { smoothAudioParam } from './audioUtils.js';
-import { resolveCityVideoForStation } from './cityVideos.js';
-import { initGlobe } from './globe.js';
+import { escapeHtml } from './htmlUtils.js';
+import { buildEmbedUrl, resolveCityVideoForStation } from './cityVideos.js';
+import { setupServiceWorker } from './pwa.js';
 
-const LIVE_STATION_LIMIT = 8000;
-const LIVE_FETCH_TIMEOUT_MS = 22000;
-const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v2';
-const LIVE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const LIVE_REFRESH_RETRY_DELAY_MS = 1200;
-const UI_SOUND_PREF_KEY = 'world-radio-atlas.ui-sounds.v1';
-const UI_SOUND_PROFILE_PREF_KEY = 'world-radio-atlas.ui-sound-profile.v1';
-const SPATIAL_AUDIO_PREF_KEY = 'world-radio-atlas.spatial-audio-mode.v1';
-const UI_SOUND_VOLUME = 0.06;
-const UI_SOUND_COOLDOWN_MS = 120;
-const SPATIAL_AUDIO_MODES = ['off', 'immersive', 'field360'];
-const SPATIAL_AUDIO_LABELS = {
-  off: 'Off',
-  immersive: 'Immersive',
-  field360: '360 field'
-};
-const SPATIAL_AUDIO_RETRY_DELAY_MS = 260;
-const MAP_PANEL_VIEWS = ['map', 'video'];
-const UI_SOUND_PROFILES = {
-  soft: {
-    label: 'Soft',
-    click: [
-      {
-        frequency: 560,
-        endFrequency: 500,
-        type: 'sine',
-        peak: 0.12,
-        attack: 0.003,
-        hold: 0.004,
-        release: 0.065
-      },
-      {
-        offset: 0.006,
-        frequency: 1120,
-        endFrequency: 920,
-        type: 'sine',
-        peak: 0.03,
-        attack: 0.002,
-        hold: 0.003,
-        release: 0.055
-      }
-    ],
-    success: [
-      {
-        frequency: 494,
-        endFrequency: 523,
-        type: 'sine',
-        peak: 0.14,
-        attack: 0.006,
-        hold: 0.026,
-        release: 0.1
-      },
-      {
-        offset: 0.072,
-        frequency: 659,
-        endFrequency: 698,
-        type: 'sine',
-        peak: 0.12,
-        attack: 0.006,
-        hold: 0.026,
-        release: 0.11
-      },
-      {
-        offset: 0.145,
-        frequency: 784,
-        endFrequency: 830,
-        type: 'sine',
-        peak: 0.09,
-        attack: 0.005,
-        hold: 0.02,
-        release: 0.1
-      }
-    ],
-    error: [
-      {
-        frequency: 523,
-        endFrequency: 466,
-        type: 'triangle',
-        peak: 0.12,
-        attack: 0.005,
-        hold: 0.026,
-        release: 0.11
-      },
-      {
-        offset: 0.075,
-        frequency: 392,
-        endFrequency: 329,
-        type: 'triangle',
-        peak: 0.11,
-        attack: 0.005,
-        hold: 0.03,
-        release: 0.12
-      }
-    ]
-  },
-  arcade: {
-    label: 'Arcade',
-    click: [
-      {
-        frequency: 980,
-        endFrequency: 900,
-        type: 'triangle',
-        peak: 0.14,
-        attack: 0.002,
-        hold: 0.008,
-        release: 0.045
-      }
-    ],
-    success: [
-      {
-        frequency: 620,
-        endFrequency: 660,
-        type: 'square',
-        peak: 0.13,
-        attack: 0.003,
-        hold: 0.022,
-        release: 0.075
-      },
-      {
-        offset: 0.05,
-        frequency: 820,
-        endFrequency: 880,
-        type: 'square',
-        peak: 0.12,
-        attack: 0.003,
-        hold: 0.022,
-        release: 0.075
-      }
-    ],
-    error: [
-      {
-        frequency: 610,
-        endFrequency: 560,
-        type: 'triangle',
-        peak: 0.13,
-        attack: 0.003,
-        hold: 0.028,
-        release: 0.085
-      },
-      {
-        offset: 0.06,
-        frequency: 430,
-        endFrequency: 380,
-        type: 'triangle',
-        peak: 0.12,
-        attack: 0.003,
-        hold: 0.032,
-        release: 0.095
-      }
-    ]
-  }
-};
-const LIVE_STATION_QUERY = `json/stations/search?order=votes&reverse=true&has_geo_info=true&hidebroken=true&limit=${LIVE_STATION_LIMIT}`;
-const MAP_TILE_ALT_TEXT = 'World map tile';
-const API_ENDPOINTS = [
-  `https://all.api.radio-browser.info/${LIVE_STATION_QUERY}`,
-  `https://de1.api.radio-browser.info/${LIVE_STATION_QUERY}`,
-  `https://fr1.api.radio-browser.info/${LIVE_STATION_QUERY}`,
-  `https://us1.api.radio-browser.info/${LIVE_STATION_QUERY}`
-];
-
-const app = document.querySelector('#app');
-
-app.innerHTML = `
-  <div class="shell">
-    <nav class="topbar" aria-label="Primary">
-      <a class="brand-mark" href="/" aria-label="World Radio Atlas home">
-        <img class="brand-mark-glyph" src="/favicon.svg" alt="" aria-hidden="true">
-        <span>World Radio Atlas</span>
-      </a>
-      <div class="topbar-links">
-        <button class="topbar-link-button active" data-top-region="world" type="button">World</button>
-        <button class="topbar-link-button" data-top-region="americas" type="button">Americas</button>
-        <button class="topbar-link-button" data-top-region="europe" type="button">Europe</button>
-        <button class="topbar-link-button" data-top-region="asia" type="button">Asia</button>
-        <button class="topbar-link-button" data-top-region="africa" type="button">Africa</button>
-        <button class="topbar-link-button" data-top-region="oceania" type="button">Oceania</button>
-      </div>
-      <button class="ghost-button topbar-refresh" id="refreshStations" type="button">Refresh directory</button>
-    </nav>
-
-    <header class="masthead">
-      <div class="brand">
-        <span class="eyebrow">Broadcast atlas / live radio</span>
-        <h1>World Radio Atlas</h1>
-        <p>Tune into a moving planet of live stations, city video, and spatial audio controls from one cinematic listening desk.</p>
-        <div class="hero-status">
-          <span class="status-chip" id="statusChip">Curated preview ready</span>
-        </div>
-        <nav class="seo-hub-links" aria-label="Indexable landing pages">
-          <span class="seo-hub-label">Quick routes</span>
-          <div class="seo-hub-row">
-            <a class="ghost-button seo-hub-link" href="/regions/">Regions</a>
-            <a class="ghost-button seo-hub-link" href="/genres/">Genres</a>
-            <a class="ghost-button seo-hub-link" href="/regions/europe/">Europe</a>
-            <a class="ghost-button seo-hub-link" href="/genres/music/">Music</a>
-          </div>
-        </nav>
-      </div>
-      <div class="masthead-actions">
-        <div class="orbital-console" aria-hidden="true">
-          <div class="orbital-scene">
-            <div class="planet-core">
-              <span class="continent continent-a"></span>
-              <span class="continent continent-b"></span>
-              <span class="continent continent-c"></span>
-            </div>
-            <span class="orbit orbit-a"><i></i></span>
-            <span class="orbit orbit-b"><i></i></span>
-            <span class="orbit orbit-c"><i></i></span>
-            <span class="signal-node node-a"></span>
-            <span class="signal-node node-b"></span>
-            <span class="signal-node node-c"></span>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main class="workspace">
-      <aside class="rail rail-left">
-        <section class="panel search-panel">
-          <div class="panel-header">
-            <h2>Field controls</h2>
-            <button class="secondary-button" id="clearFilters" type="button">Reset</button>
-          </div>
-          <p class="helper-copy">Search, narrow the map, then move between regions without resetting the listening flow.</p>
-          <div class="search-field">
-            <input id="searchInput" class="search-input" type="search" placeholder="Search city, country, station, or genre" aria-label="Search stations">
-            <div class="compact-row">
-              <button class="micro-button" id="nearMeButton" type="button">Near me</button>
-              <button class="micro-button" id="shuffleFeatured" type="button">Shuffle featured</button>
-            </div>
-          </div>
-          <div class="filter-section">
-            <p class="section-label">Genres</p>
-            <div class="filter-row" id="filterChips"></div>
-          </div>
-          <div class="filter-section">
-            <p class="section-label">Regions</p>
-            <div class="segment-row" id="regionChips"></div>
-          </div>
-          <div class="filter-section">
-            <p class="section-label">Map style</p>
-            <div class="segment-row" id="styleChips"></div>
-          </div>
-        </section>
-
-        <section class="panel featured-panel">
-          <div class="panel-header">
-            <h2>Featured signals</h2>
-            <span class="queue-count"><strong id="featuredCount">0</strong> picks</span>
-          </div>
-          <p class="helper-copy">A rotating shortlist of strong stations to start from while the broader directory settles.</p>
-          <div class="featured-list" id="featuredList"></div>
-        </section>
-      </aside>
-
-      <section class="map-panel">
-        <div class="map-head">
-          <div class="map-head-copy">
-            <span class="eyebrow">Signal map</span>
-            <h2 id="mapTitle">Global radio field</h2>
-          </div>
-          <div class="map-head-actions">
-            <div class="map-stats">
-              <div class="mini-stat">
-                <span class="kicker">Stations</span>
-                <strong id="stationCount">0</strong>
-              </div>
-              <div class="mini-stat">
-                <span class="kicker">Countries</span>
-                <strong id="countryCount">0</strong>
-              </div>
-              <div class="mini-stat">
-                <span class="kicker">Mode</span>
-                <strong id="modeLabel">Preview</strong>
-              </div>
-            </div>
-          </div>
-          <p class="map-summary" id="mapSummary">Browse by city, country, or genre. The map stays in sync with your current filter stack and live directory state.</p>
-          <div class="map-view-switch" id="mapViewSwitch" role="group" aria-label="Map panel view">
-            <button class="segment-button map-view-button active" data-stage-view="map" type="button" aria-pressed="true">Map</button>
-            <button class="segment-button map-view-button" data-stage-view="video" type="button" aria-pressed="false">City video</button>
-          </div>
-        </div>
-        <div class="map-stage" id="mapStage">
-          <div id="map"></div>
-          <div class="video-stage" id="videoStage" hidden>
-            <iframe id="cityVideoFrame" class="city-video-frame" title="City video" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
-            <article class="video-empty" id="videoEmpty">
-              <h3 id="videoEmptyTitle">Select a station to watch city video</h3>
-              <p id="videoEmptyMeta">Choose a station, then switch to Video to watch a related city clip.</p>
-            </article>
-          </div>
-          <div class="map-overlay" id="mapOverlay">
-            <button class="map-overlay-toggle" id="mapOverlayToggle" type="button" aria-expanded="true" aria-controls="mapOverlayCard">Hide guide</button>
-            <div class="map-overlay-card" id="mapOverlayCard">
-              <p id="statusMessage">Exploring a curated preview while the live directory loads.</p>
-              <div class="map-overlay-hints" aria-hidden="true">
-                <span>Tap markers</span>
-                <span>Search by location</span>
-                <span>Clustered map</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <aside class="rail rail-right">
-        <section class="panel now-playing-panel">
-          <div class="panel-header">
-            <h2>Signal desk</h2>
-            <span class="tiny-badge" id="liveBadge">Preview</span>
-          </div>
-          <div class="now-playing-card">
-            <div class="now-playing-art" id="nowPlayingArt">W</div>
-            <div>
-              <h3 id="nowPlayingTitle">Nothing selected</h3>
-              <p id="nowPlayingMeta">Choose a station from the list or the map.</p>
-            </div>
-          </div>
-          <div class="player-controls">
-            <div class="control-row">
-              <button class="play-toggle" id="playPauseBtn" type="button">Play</button>
-              <button class="secondary-button" id="focusMapButton" type="button">Focus map</button>
-              <button class="secondary-button spatial-audio-toggle" id="spatialAudioToggle" type="button">Spatial audio: Off</button>
-              <button class="secondary-button sound-toggle" id="uiSoundToggle" type="button" aria-pressed="false">UI sounds: Off</button>
-              <button class="secondary-button sound-profile-toggle" id="uiSoundProfileToggle" type="button">Sound profile: Soft</button>
-            </div>
-            <div class="volume-wrap">
-              <label for="volumeSlider">Volume</label>
-              <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="70" aria-label="Volume level">
-            </div>
-            <div class="track-stats" id="trackStats">Select a station to start listening.</div>
-          </div>
-        </section>
-
-        <section class="panel station-panel">
-          <div class="panel-header">
-            <h2>Station index</h2>
-            <button class="load-more-button" id="loadMoreBtn" type="button">Load more</button>
-          </div>
-          <p class="helper-copy">A running station ledger ordered for quick scanning while keeping playback one tap away.</p>
-          <div class="queue-tools">
-            <span class="queue-count"><strong id="visibleCount">0</strong> visible</span>
-            <span class="queue-count"><strong id="modeBadge">Preview</strong></span>
-          </div>
-          <div class="station-list" id="stationList"></div>
-        </section>
-      </aside>
-    </main>
-  </div>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <audio id="playerAudio" crossorigin="anonymous" preload="none"></audio>
-`;
-
-const refs = {
-  app,
-  topbarLinks: document.querySelector('.topbar-links'),
-  statusChip: document.querySelector('#statusChip'),
-  refreshStations: document.querySelector('#refreshStations'),
-  clearFilters: document.querySelector('#clearFilters'),
-  searchInput: document.querySelector('#searchInput'),
-  nearMeButton: document.querySelector('#nearMeButton'),
-  shuffleFeatured: document.querySelector('#shuffleFeatured'),
-  filterChips: document.querySelector('#filterChips'),
-  regionChips: document.querySelector('#regionChips'),
-  styleChips: document.querySelector('#styleChips'),
-  featuredList: document.querySelector('#featuredList'),
-  featuredCount: document.querySelector('#featuredCount'),
-  stationCount: document.querySelector('#stationCount'),
-  countryCount: document.querySelector('#countryCount'),
-  modeLabel: document.querySelector('#modeLabel'),
-  mapTitle: document.querySelector('#mapTitle'),
-  mapSummary: document.querySelector('#mapSummary'),
-  mapViewSwitch: document.querySelector('#mapViewSwitch'),
-  mapStage: document.querySelector('#mapStage'),
-  mapOverlay: document.querySelector('#mapOverlay'),
-  mapOverlayToggle: document.querySelector('#mapOverlayToggle'),
-  videoStage: document.querySelector('#videoStage'),
-  cityVideoFrame: document.querySelector('#cityVideoFrame'),
-  videoEmpty: document.querySelector('#videoEmpty'),
-  videoEmptyTitle: document.querySelector('#videoEmptyTitle'),
-  videoEmptyMeta: document.querySelector('#videoEmptyMeta'),
-  statusMessage: document.querySelector('#statusMessage'),
-  liveBadge: document.querySelector('#liveBadge'),
-  nowPlayingArt: document.querySelector('#nowPlayingArt'),
-  nowPlayingTitle: document.querySelector('#nowPlayingTitle'),
-  nowPlayingMeta: document.querySelector('#nowPlayingMeta'),
-  playPauseBtn: document.querySelector('#playPauseBtn'),
-  focusMapButton: document.querySelector('#focusMapButton'),
-  spatialAudioToggle: document.querySelector('#spatialAudioToggle'),
-  uiSoundToggle: document.querySelector('#uiSoundToggle'),
-  uiSoundProfileToggle: document.querySelector('#uiSoundProfileToggle'),
-  volumeSlider: document.querySelector('#volumeSlider'),
-  trackStats: document.querySelector('#trackStats'),
-  loadMoreBtn: document.querySelector('#loadMoreBtn'),
-  stationList: document.querySelector('#stationList'),
-  visibleCount: document.querySelector('#visibleCount'),
-  modeBadge: document.querySelector('#modeBadge'),
-  toast: document.querySelector('#toast'),
-  audio: document.querySelector('#playerAudio'),
-  map: document.querySelector('#map'),
-  orbitalConsole: document.querySelector('.orbital-console')
-};
+const LIVE_FETCH_TIMEOUT_MS = 20000;
+const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v6';
+const LIVE_CACHE_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
+let isBrowsePage = window.location.pathname.includes('browse.html');
+let isVideoPage = window.location.pathname.includes('videos.html');
 
 const state = {
-  mode: 'preview',
-  activeFilter: 'all',
-  activeRegion: 'world',
-  activeStyle: 'night',
-  query: '',
-  visibleCount: 18,
-  selectedId: '',
-  isPlaying: false,
-  userLocation: null,
   allStations: fallbackStations.slice(),
-  featuredStations: fallbackStations.slice(0, 6),
-  filteredStations: fallbackStations.slice(),
-  mapPanelView: 'map',
-  selectedCityVideo: null,
-  isMapOverlayCollapsed: false,
-  liveCacheUpdatedAt: null,
-  spatialAudioMode: 'off',
-  spatialAudioReady: false,
-  uiSoundsEnabled: false,
-  uiSoundProfile: 'soft',
-  hasUserInteracted: false,
-  lastUiSoundAt: 0,
-  renderToken: 0,
-  markerToken: 0,
-  stationLayers: new Map(),
-  baseLayers: {}
+  filteredStations: [],
+  visibleStationsCount: 40,
+  currentStation: null,
+  currentContinent: 'all',
+  isPlaying: false,
+  audio: document.querySelector('#playerAudio'),
+  audioCtx: null,
+  audioSource: null,
+  audioFilters: {},
+  currentAudioStyle: 'normal',
+  volume: 0.8,
+  lastVolume: 0.8,
+  map: null,
+  clusters: null,
+  loadingStations: false
 };
 
-const FILTER_KEYS = new Set(filterGroups.map((group) => group.key));
-const REGION_KEYS = new Set(Object.keys(regionBounds));
-const HASH_ALIASES = {
-  electronic: 'ambient',
-  top: 'all'
-};
+// Robust Audio Stream Handling
+state.audio.addEventListener('waiting', () => {
+  showToast('Buffering stream...');
+});
 
-const DEFAULT_SEO = {
-  title: 'World Radio Atlas | Live Radio Stations on a Global Map',
-  description: 'Discover live radio stations from around the world on an interactive map with curated picks, filters, and instant playback.'
-};
+state.audio.addEventListener('playing', () => {
+  state.isPlaying = true;
+  updateGlobalPlayState();
+});
 
-const REGION_SEO = {
-  americas: {
-    title: 'Americas live radio stations | World Radio Atlas',
-    description: 'Browse live radio stations across North, Central, and South America on the World Radio Atlas map.'
-  },
-  europe: {
-    title: 'Europe live radio stations | World Radio Atlas',
-    description: 'Explore live radio stations from across Europe with map-based browsing and quick access to curated picks.'
-  },
-  asia: {
-    title: 'Asia live radio stations | World Radio Atlas',
-    description: 'Find live radio stations from across Asia on a fast, map-first discovery page.'
-  },
-  africa: {
-    title: 'Africa live radio stations | World Radio Atlas',
-    description: 'Discover live radio stations from across Africa with filters for music, news, and talk.'
-  },
-  oceania: {
-    title: 'Oceania live radio stations | World Radio Atlas',
-    description: 'Browse live radio stations from Australia, New Zealand, and the wider Oceania region.'
+state.audio.addEventListener('pause', () => {
+  state.isPlaying = false;
+  updateGlobalPlayState();
+});
+
+state.audio.addEventListener('error', () => {
+  if (state.currentStation) {
+    showToast(`Stream error for ${state.currentStation.name}. Please try another.`);
+    state.isPlaying = false;
+    updateGlobalPlayState();
   }
-};
+});
 
-const FILTER_SEO = {
-  music: {
-    title: 'Music radio stations | World Radio Atlas',
-    description: 'Browse live music radio stations from around the world with curated map-based discovery.'
-  },
-  news: {
-    title: 'News radio stations | World Radio Atlas',
-    description: 'Explore live news and talk radio stations from around the world on a global map.'
-  },
-  talk: {
-    title: 'Talk radio stations | World Radio Atlas',
-    description: 'Find live talk radio stations, interviews, and conversation-led streams across the world.'
-  },
-  ambient: {
-    title: 'Ambient radio stations | World Radio Atlas',
-    description: 'Discover ambient, chill, and lo-fi radio stations curated for slower listening.'
+state.audio.addEventListener('stalled', () => {
+  if (state.isPlaying && state.currentStation) {
+    showToast('Stream connection unstable. Reconnecting...');
+    state.audio.load();
+    state.audio.play().catch(()=>{});
   }
-};
+});
 
-if ('serviceWorker' in navigator) {
-  // Clean up legacy registration so old cache-first behavior cannot keep stale bundles alive.
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations()
-      .then((registrations) => {
-        registrations.forEach((registration) => {
-          registration.unregister();
-        });
-      })
-      .catch(() => {
-        // Ignore cleanup failures.
-      });
-  }, { once: true });
-}
-
-const audio = refs.audio;
-audio.volume = 0.7;
-
-let map;
-let clusterLayer;
-let uiAudioContext;
-let uiMasterGain;
-let uiToneFilter;
-let uiToneCompressor;
-let streamAudioContext;
-let streamSourceNode;
-let streamDryGain;
-let streamWetGain;
-let streamWetFilter;
-let streamConvolver;
-let streamTapDelayA;
-let streamTapDelayB;
-let streamTapGainA;
-let streamTapGainB;
-let streamTapPanA;
-let streamTapPanB;
-
-function makeStationId(station) {
-  return station.id || station.stationuuid || `${station.name}-${station.country}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-}
-
-function normalizeStation(item) {
-  const lat = Number(item.geo_lat ?? item.lat);
-  const lng = Number(item.geo_long ?? item.lng ?? item.lon);
-  const url = item.url_resolved || item.url || item.stream || '';
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !url) {
-    return null;
+function updateGlobalPlayState() {
+  const pbPlayPauseBtn = document.getElementById('pb-play-pause');
+  const pauseIcon = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg>';
+  const playIcon = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7 4v16l12-8z"/></svg>';
+  
+  if (pbPlayPauseBtn) {
+    pbPlayPauseBtn.innerHTML = state.isPlaying ? pauseIcon : playIcon;
   }
-
-  const name = item.name || item.station_name || 'Untitled signal';
-  return {
-    id: makeStationId(item),
-    name,
-    country: item.country || 'Unknown',
-    city: item.city || item.state || '',
-    state: item.state || '',
-    tags: item.tags || '',
-    votes: Number(item.votes) || 0,
-    lat,
-    lng,
-    url,
-    favicon: item.favicon || '',
-    source: item.source || 'live'
-  };
-}
-
-function sanitizeStations(items) {
-  if (!Array.isArray(items)) return [];
-
-  const seen = new Set();
-  return items
-    .map(normalizeStation)
-    .filter((station) => station && station.name && station.url)
-    .filter((station) => station.lat >= -90 && station.lat <= 90 && station.lng >= -180 && station.lng <= 180)
-    .filter((station) => {
-      if (seen.has(station.id)) return false;
-      seen.add(station.id);
-      return true;
-    });
-}
-
-function readCachedLiveStations() {
-  if (!('localStorage' in window)) return null;
-
-  try {
-    const raw = window.localStorage.getItem(LIVE_CACHE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    const stations = sanitizeStations(parsed?.stations || []);
-    if (!stations.length) return null;
-
-    const cachedAt = Number(parsed?.cachedAt);
-
-    return {
-      stations,
-      cachedAt: Number.isFinite(cachedAt) && cachedAt > 0 ? cachedAt : Date.now()
-    };
-  } catch (error) {
-    console.warn('Could not read local cache.', error);
-    return null;
+  
+  if (state.currentStation) {
+    highlightActiveStation(state.currentStation.id);
   }
 }
 
-function writeCachedLiveStations(stations, cachedAt = Date.now()) {
-  if (!('localStorage' in window)) return;
-
-  try {
-    window.localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({
-      cachedAt,
-      stations
-    }));
-  } catch (error) {
-    console.warn('Could not write local cache.', error);
-  }
-
-  return cachedAt;
-}
-
-function shouldRefreshLiveCache(cacheEntry) {
-  if (!cacheEntry?.cachedAt) return true;
-  return (Date.now() - cacheEntry.cachedAt) >= LIVE_CACHE_TTL_MS;
-}
-
-function readUiSoundPreference() {
-  if (!('localStorage' in window)) return false;
-
-  try {
-    return window.localStorage.getItem(UI_SOUND_PREF_KEY) === 'on';
-  } catch {
-    return false;
+let toastTimeout;
+function showToast(msg, persistent = false) {
+  const toast = document.querySelector('#toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  
+  clearTimeout(toastTimeout);
+  if (!persistent) {
+    toastTimeout = setTimeout(() => toast.classList.remove('visible'), 3000);
   }
 }
 
-function writeUiSoundPreference(enabled) {
-  if (!('localStorage' in window)) return;
-
-  try {
-    window.localStorage.setItem(UI_SOUND_PREF_KEY, enabled ? 'on' : 'off');
-  } catch {
-    // Ignore preference write failures.
-  }
+function hideToast() {
+  const toast = document.querySelector('#toast');
+  if (toast) toast.classList.remove('visible');
 }
 
-function readUiSoundProfilePreference() {
-  if (!('localStorage' in window)) return 'soft';
-
-  try {
-    const raw = window.localStorage.getItem(UI_SOUND_PROFILE_PREF_KEY);
-    return UI_SOUND_PROFILES[raw] ? raw : 'soft';
-  } catch {
-    return 'soft';
-  }
-}
-
-function writeUiSoundProfilePreference(profile) {
-  if (!('localStorage' in window)) return;
-
-  if (!UI_SOUND_PROFILES[profile]) return;
-
-  try {
-    window.localStorage.setItem(UI_SOUND_PROFILE_PREF_KEY, profile);
-  } catch {
-    // Ignore preference write failures.
-  }
-}
-
-function readSpatialAudioPreference() {
-  if (!('localStorage' in window)) return 'off';
-
-  try {
-    const value = window.localStorage.getItem(SPATIAL_AUDIO_PREF_KEY);
-    return SPATIAL_AUDIO_MODES.includes(value) ? value : 'off';
-  } catch {
-    return 'off';
-  }
-}
-
-function writeSpatialAudioPreference(mode) {
-  if (!('localStorage' in window)) return;
-  if (!SPATIAL_AUDIO_MODES.includes(mode)) return;
-
-  try {
-    window.localStorage.setItem(SPATIAL_AUDIO_PREF_KEY, mode);
-  } catch {
-    // Ignore preference write failures.
-  }
-}
-
-function getUiSoundProfile() {
-  return UI_SOUND_PROFILES[state.uiSoundProfile] || UI_SOUND_PROFILES.soft;
-}
-
-function syncUiSoundToggle() {
-  if (!refs.uiSoundToggle) return;
-
-  refs.uiSoundToggle.textContent = state.uiSoundsEnabled ? 'UI sounds: On' : 'UI sounds: Off';
-  refs.uiSoundToggle.setAttribute('aria-pressed', String(state.uiSoundsEnabled));
-  refs.uiSoundToggle.classList.toggle('is-on', state.uiSoundsEnabled);
-}
-
-function syncUiSoundProfileToggle() {
-  if (!refs.uiSoundProfileToggle) return;
-
-  const activeProfile = getUiSoundProfile();
-  refs.uiSoundProfileToggle.textContent = `Sound profile: ${activeProfile.label}`;
-  refs.uiSoundProfileToggle.classList.toggle('is-arcade', state.uiSoundProfile === 'arcade');
-}
-
-function syncSpatialAudioToggle() {
-  if (!refs.spatialAudioToggle) return;
-
-  const label = SPATIAL_AUDIO_LABELS[state.spatialAudioMode] || SPATIAL_AUDIO_LABELS.off;
-  refs.spatialAudioToggle.textContent = `Spatial audio: ${label}`;
-  refs.spatialAudioToggle.classList.toggle('is-on', state.spatialAudioMode !== 'off');
-  refs.spatialAudioToggle.classList.toggle('is-360', state.spatialAudioMode === 'field360');
-}
-
-function syncMapPanelToggle() {
-  if (!refs.mapViewSwitch) return;
-
-  refs.mapViewSwitch.querySelectorAll('[data-stage-view]').forEach((button) => {
-    const isActive = button.dataset.stageView === state.mapPanelView;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', String(isActive));
-  });
-}
-
-function syncMapOverlayState() {
-  if (!refs.mapOverlay || !refs.mapOverlayToggle) return;
-
-  refs.mapOverlay.classList.toggle('is-collapsed', state.isMapOverlayCollapsed);
-  refs.mapOverlayToggle.setAttribute('aria-expanded', String(!state.isMapOverlayCollapsed));
-  refs.mapOverlayToggle.textContent = state.isMapOverlayCollapsed ? 'Show guide' : 'Hide guide';
-}
-
-function setMapOverlayCollapsed(collapsed) {
-  state.isMapOverlayCollapsed = Boolean(collapsed);
-  syncMapOverlayState();
-}
-
-function collapseMapOverlay() {
-  if (state.mapPanelView !== 'map' || state.isMapOverlayCollapsed) return;
-  setMapOverlayCollapsed(true);
-}
-
-function getStationLocationLabel(station) {
-  if (!station) return 'this location';
-
-  const locality = station.city || station.state || '';
-  return locality ? `${locality}, ${station.country}` : station.country || 'this location';
-}
-
-function clearCityVideoFrame() {
-  if (!refs.cityVideoFrame) return;
-
-  if (refs.cityVideoFrame.dataset.activeSrc) {
-    refs.cityVideoFrame.src = 'about:blank';
-    refs.cityVideoFrame.dataset.activeSrc = '';
-  }
-
-  refs.cityVideoFrame.hidden = true;
-}
-
-function renderCityVideoPane(station = getSelectedStation()) {
-  if (!refs.videoEmpty || !refs.videoEmptyTitle || !refs.videoEmptyMeta || !refs.cityVideoFrame) {
-    return;
-  }
-
-  if (!station) {
-    refs.videoEmpty.hidden = false;
-    refs.videoEmptyTitle.textContent = 'Select a station to watch city video';
-    refs.videoEmptyMeta.textContent = 'Choose a station, then switch to Video to watch a related city clip.';
-    clearCityVideoFrame();
-    return;
-  }
-
-  const video = state.selectedCityVideo || resolveCityVideoForStation(station);
-  state.selectedCityVideo = video;
-
-  if (!video?.embedUrl) {
-    refs.videoEmpty.hidden = false;
-    refs.videoEmptyTitle.textContent = `No curated video available for ${getStationLocationLabel(station)}`;
-    refs.videoEmptyMeta.textContent = 'Try another station or switch back to Map to continue browsing.';
-    clearCityVideoFrame();
-    return;
-  }
-
-  refs.videoEmpty.hidden = true;
-  refs.cityVideoFrame.hidden = false;
-  refs.cityVideoFrame.title = video.title || `City video for ${getStationLocationLabel(station)}`;
-
-  if (refs.cityVideoFrame.dataset.activeSrc !== video.embedUrl) {
-    refs.cityVideoFrame.src = video.embedUrl;
-    refs.cityVideoFrame.dataset.activeSrc = video.embedUrl;
-  }
-}
-
-function setMapPanelView(view, { quiet = false } = {}) {
-  const nextView = MAP_PANEL_VIEWS.includes(view) ? view : 'map';
-  state.mapPanelView = nextView;
-
-  syncMapPanelToggle();
-  refs.mapStage?.classList.toggle('is-video', nextView === 'video');
-
-  if (refs.videoStage) {
-    refs.videoStage.hidden = nextView !== 'video';
-  }
-
-  if (nextView === 'video') {
-    setMapOverlayCollapsed(true);
-    renderCityVideoPane();
-    if (!quiet) {
-      showToast('City video view enabled.');
-    }
-    return;
-  }
-
-  clearCityVideoFrame();
-  setMapOverlayCollapsed(false);
-  if (!quiet) {
-    showToast('Map view enabled.');
-  }
-  window.setTimeout(() => map?.invalidateSize(), 140);
-}
-
-function markUserInteraction() {
-  if (state.hasUserInteracted) return;
-
-  state.hasUserInteracted = true;
-}
-
-function getUiAudioContext() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
-
-  if (!uiAudioContext) {
-    uiAudioContext = new AudioContextClass();
-  }
-
-  if (!uiMasterGain || uiMasterGain.context !== uiAudioContext) {
-    uiToneFilter = uiAudioContext.createBiquadFilter();
-    uiToneFilter.type = 'lowpass';
-    uiToneFilter.frequency.value = 2800;
-    uiToneFilter.Q.value = 0.24;
-
-    uiToneCompressor = uiAudioContext.createDynamicsCompressor();
-    uiToneCompressor.threshold.value = -28;
-    uiToneCompressor.knee.value = 16;
-    uiToneCompressor.ratio.value = 2.2;
-    uiToneCompressor.attack.value = 0.003;
-    uiToneCompressor.release.value = 0.12;
-
-    uiMasterGain = uiAudioContext.createGain();
-    // Keep UI sounds subtle and separate from stream volume.
-    uiMasterGain.gain.value = UI_SOUND_VOLUME;
-
-    uiToneFilter.connect(uiToneCompressor);
-    uiToneCompressor.connect(uiMasterGain);
-    uiMasterGain.connect(uiAudioContext.destination);
-  }
-
-  return uiAudioContext;
-}
-
-function withUiAudioContext(callback) {
-  const context = getUiAudioContext();
-  if (!context) return;
-
-  if (context.state === 'suspended') {
-    context.resume()
-      .then(() => {
-        callback(context);
-      })
-      .catch(() => {
-        // Ignore resume failures.
-      });
-    return;
-  }
-
-  callback(context);
-}
-
-function reserveUiSoundSlot(minInterval = UI_SOUND_COOLDOWN_MS) {
-  if (!state.uiSoundsEnabled || !state.hasUserInteracted) return false;
-
-  const now = performance.now();
-  if (now - state.lastUiSoundAt < minInterval) return false;
-  state.lastUiSoundAt = now;
-  return true;
-}
-
-function createSpatialImpulseResponse(context, duration = 1.25, decay = 2.4) {
-  const sampleRate = context.sampleRate;
-  const length = Math.floor(sampleRate * duration);
-  const impulse = context.createBuffer(2, length, sampleRate);
-
-  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
-    const data = impulse.getChannelData(channel);
-    for (let index = 0; index < length; index += 1) {
-      const envelope = (1 - (index / length)) ** decay;
-      data[index] = (Math.random() * 2 - 1) * envelope * 0.36;
-    }
-  }
-
-  return impulse;
-}
-
-function createStereoPanNode(context, panValue) {
-  if (typeof context.createStereoPanner === 'function') {
-    const panner = context.createStereoPanner();
-    panner.pan.value = panValue;
-    return panner;
-  }
-
-  return context.createGain();
-}
-
-function setSpatialPan(node, value) {
-  if (!node?.pan) return;
-  node.pan.setValueAtTime(value, node.context.currentTime);
-}
-
-function applySpatialAudioMode(mode) {
-  if (!state.spatialAudioReady || !streamAudioContext || !streamDryGain || !streamWetGain) {
-    return;
-  }
-
-  switch (mode) {
-    case 'immersive':
-      smoothAudioParam(streamDryGain.gain, 0.86, 0.06, streamAudioContext);
-      smoothAudioParam(streamWetGain.gain, 0.24, 0.06, streamAudioContext);
-      smoothAudioParam(streamTapGainA.gain, 0.12, 0.06, streamAudioContext);
-      smoothAudioParam(streamTapGainB.gain, 0.14, 0.06, streamAudioContext);
-      smoothAudioParam(streamWetFilter.frequency, 4400, 0.08, streamAudioContext);
-      streamTapDelayA.delayTime.setValueAtTime(0.015, streamAudioContext.currentTime);
-      streamTapDelayB.delayTime.setValueAtTime(0.022, streamAudioContext.currentTime);
-      setSpatialPan(streamTapPanA, -0.5);
-      setSpatialPan(streamTapPanB, 0.5);
-      break;
-    case 'field360':
-      smoothAudioParam(streamDryGain.gain, 0.74, 0.06, streamAudioContext);
-      smoothAudioParam(streamWetGain.gain, 0.34, 0.06, streamAudioContext);
-      smoothAudioParam(streamTapGainA.gain, 0.2, 0.06, streamAudioContext);
-      smoothAudioParam(streamTapGainB.gain, 0.22, 0.06, streamAudioContext);
-      smoothAudioParam(streamWetFilter.frequency, 3600, 0.08, streamAudioContext);
-      streamTapDelayA.delayTime.setValueAtTime(0.019, streamAudioContext.currentTime);
-      streamTapDelayB.delayTime.setValueAtTime(0.028, streamAudioContext.currentTime);
-      setSpatialPan(streamTapPanA, -0.78);
-      setSpatialPan(streamTapPanB, 0.78);
-      break;
-    default:
-      smoothAudioParam(streamDryGain.gain, 1, 0.05, streamAudioContext);
-      smoothAudioParam(streamWetGain.gain, 0, 0.05, streamAudioContext);
-      smoothAudioParam(streamTapGainA.gain, 0, 0.05, streamAudioContext);
-      smoothAudioParam(streamTapGainB.gain, 0, 0.05, streamAudioContext);
-      smoothAudioParam(streamWetFilter.frequency, 5200, 0.06, streamAudioContext);
-      streamTapDelayA.delayTime.setValueAtTime(0.015, streamAudioContext.currentTime);
-      streamTapDelayB.delayTime.setValueAtTime(0.022, streamAudioContext.currentTime);
-      setSpatialPan(streamTapPanA, -0.5);
-      setSpatialPan(streamTapPanB, 0.5);
-  }
-}
-
-function ensureSpatialAudioGraph() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return false;
-
-  try {
-    if (!streamAudioContext) {
-      streamAudioContext = new AudioContextClass();
-    }
-
-    if (!streamSourceNode) {
-      streamSourceNode = streamAudioContext.createMediaElementSource(audio);
-    }
-
-    if (!state.spatialAudioReady) {
-      streamDryGain = streamAudioContext.createGain();
-      streamWetGain = streamAudioContext.createGain();
-      streamWetFilter = streamAudioContext.createBiquadFilter();
-      streamConvolver = streamAudioContext.createConvolver();
-      streamTapDelayA = streamAudioContext.createDelay(0.08);
-      streamTapDelayB = streamAudioContext.createDelay(0.08);
-      streamTapGainA = streamAudioContext.createGain();
-      streamTapGainB = streamAudioContext.createGain();
-      streamTapPanA = createStereoPanNode(streamAudioContext, -0.5);
-      streamTapPanB = createStereoPanNode(streamAudioContext, 0.5);
-
-      streamWetFilter.type = 'lowpass';
-      streamWetFilter.frequency.value = 5200;
-      streamWetFilter.Q.value = 0.62;
-
-      streamConvolver.normalize = true;
-      streamConvolver.buffer = createSpatialImpulseResponse(streamAudioContext);
-
-      streamTapDelayA.delayTime.value = 0.015;
-      streamTapDelayB.delayTime.value = 0.022;
-
-      streamTapGainA.gain.value = 0;
-      streamTapGainB.gain.value = 0;
-      streamWetGain.gain.value = 0;
-      streamDryGain.gain.value = 1;
-
-      streamSourceNode.connect(streamDryGain);
-      streamDryGain.connect(streamAudioContext.destination);
-
-      streamSourceNode.connect(streamWetFilter);
-      streamWetFilter.connect(streamConvolver);
-      streamConvolver.connect(streamWetGain);
-
-      streamSourceNode.connect(streamTapDelayA);
-      streamTapDelayA.connect(streamTapPanA);
-      streamTapPanA.connect(streamTapGainA);
-      streamTapGainA.connect(streamWetGain);
-
-      streamSourceNode.connect(streamTapDelayB);
-      streamTapDelayB.connect(streamTapPanB);
-      streamTapPanB.connect(streamTapGainB);
-      streamTapGainB.connect(streamWetGain);
-
-      streamWetGain.connect(streamAudioContext.destination);
-      state.spatialAudioReady = true;
-      applySpatialAudioMode(state.spatialAudioMode);
-    }
-
-    if (streamAudioContext.state === 'suspended') {
-      streamAudioContext.resume().catch(() => {
-        // Ignore resume failures.
-      });
-    }
-
-    return true;
-  } catch (error) {
-    console.warn('Spatial audio graph could not be initialized.', error);
-    return false;
-  }
-}
-
-function activateSpatialAudioMode(mode = state.spatialAudioMode) {
-  if (mode === 'off') {
-    applySpatialAudioMode('off');
-    return true;
-  }
-
-  const spatialReady = ensureSpatialAudioGraph();
-  if (!spatialReady) return false;
-
-  applySpatialAudioMode(mode);
-  return true;
-}
-
-function scheduleSpatialAudioRetry(mode = state.spatialAudioMode) {
-  let resolved = false;
-
-  const retry = () => {
-    if (resolved) return;
-    if (state.spatialAudioMode !== mode || mode === 'off') {
-      resolved = true;
-      return;
-    }
-
-    if (activateSpatialAudioMode(mode)) {
-      resolved = true;
-    }
-  };
-
-  window.setTimeout(retry, SPATIAL_AUDIO_RETRY_DELAY_MS);
-  audio.addEventListener('playing', retry, { once: true });
-}
-
-function scheduleUiTone(context, startTime, {
-  frequency,
-  endFrequency,
-  type = 'sine',
-  peak = 0.3,
-  attack = 0.005,
-  hold = 0.02,
-  release = 0.055
-}) {
-  if (!uiToneFilter || !uiMasterGain) return;
-
-  const oscillator = context.createOscillator();
-  const gainNode = context.createGain();
-  const startFrequency = Math.max(1, Number(frequency) || 440);
-  const glideFrequency = Math.max(1, Number(endFrequency ?? startFrequency));
-  const toneDuration = attack + hold + release;
-  const peakGain = Math.max(0.0001, peak);
-
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(startFrequency, startTime);
-  if (glideFrequency !== startFrequency) {
-    oscillator.frequency.exponentialRampToValueAtTime(glideFrequency, startTime + toneDuration);
-  }
-
-  gainNode.gain.setValueAtTime(0.0001, startTime);
-  gainNode.gain.exponentialRampToValueAtTime(peakGain, startTime + attack);
-  gainNode.gain.setValueAtTime(peakGain, startTime + attack + hold);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + attack + hold + release);
-
-  oscillator.connect(gainNode);
-  gainNode.connect(uiToneFilter);
-  oscillator.start(startTime);
-  oscillator.stop(startTime + toneDuration + 0.01);
-}
-
-function playUiClickCue() {
-  const profile = getUiSoundProfile();
-  if (!reserveUiSoundSlot(90)) return;
-
-  withUiAudioContext((context) => {
-    const start = context.currentTime + 0.002;
-    profile.click.forEach((tone) => {
-      const { offset = 0, ...config } = tone;
-      scheduleUiTone(context, start + offset, config);
-    });
-  });
-}
-
-function playUiSuccessCue() {
-  const profile = getUiSoundProfile();
-  if (!reserveUiSoundSlot(260)) return;
-
-  withUiAudioContext((context) => {
-    const start = context.currentTime + 0.002;
-    profile.success.forEach((tone) => {
-      const { offset = 0, ...config } = tone;
-      scheduleUiTone(context, start + offset, config);
-    });
-  });
-}
-
-function playUiErrorCue() {
-  const profile = getUiSoundProfile();
-  if (!reserveUiSoundSlot(260)) return;
-
-  withUiAudioContext((context) => {
-    const start = context.currentTime + 0.002;
-    profile.error.forEach((tone) => {
-      const { offset = 0, ...config } = tone;
-      scheduleUiTone(context, start + offset, config);
-    });
-  });
-}
-
-function wait(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-function formatCacheUpdatedAt(timestamp) {
-  if (!Number.isFinite(timestamp)) return '';
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toLocaleString([], {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  });
-}
-
-function updateSeoMetadata({ title, description }) {
-  const metaDescription = document.querySelector('meta[name="description"]');
-  const ogTitle = document.querySelector('meta[property="og:title"]');
-  const ogDescription = document.querySelector('meta[property="og:description"]');
-  const twitterTitle = document.querySelector('meta[name="twitter:title"]');
-  const twitterDescription = document.querySelector('meta[name="twitter:description"]');
-
-  document.title = title || DEFAULT_SEO.title;
-  if (metaDescription) metaDescription.content = description || DEFAULT_SEO.description;
-  if (ogTitle) ogTitle.content = title || DEFAULT_SEO.title;
-  if (ogDescription) ogDescription.content = description || DEFAULT_SEO.description;
-  if (twitterTitle) twitterTitle.content = title || DEFAULT_SEO.title;
-  if (twitterDescription) twitterDescription.content = description || DEFAULT_SEO.description;
-}
-
-function getSeoMetadata() {
-  if (state.selectedId) {
-    const station = getSelectedStation();
-    if (station) {
-      return {
-        title: `${station.name} | World Radio Atlas`,
-        description: `Listen to ${station.name} from ${station.country}${station.city ? `, ${station.city}` : ''} on World Radio Atlas.`
-      };
-    }
-  }
-
-  if (state.activeFilter !== 'all' && state.activeFilter !== 'nearby' && FILTER_SEO[state.activeFilter]) {
-    return FILTER_SEO[state.activeFilter];
-  }
-
-  if (state.activeRegion !== 'world' && REGION_SEO[state.activeRegion]) {
-    return REGION_SEO[state.activeRegion];
-  }
-
-  if (state.query) {
-    return {
-      title: `Search results for "${state.query}" | World Radio Atlas`,
-      description: `Browse live radio stations matching ${state.query} on the World Radio Atlas map.`
-    };
-  }
-
-  return DEFAULT_SEO;
-}
-
-function syncSeoMetadata() {
-  updateSeoMetadata(getSeoMetadata());
-}
-
-function updateStatusChip() {
-  if (!refs.statusChip) return;
-
-  if (state.mode !== 'live') {
-    refs.statusChip.textContent = 'Curated preview';
-    return;
-  }
-
-  const formatted = formatCacheUpdatedAt(state.liveCacheUpdatedAt);
-  refs.statusChip.textContent = formatted
-    ? `Live directory · Updated ${formatted}`
-    : 'Live directory';
-}
-
-async function getLiveStationsWithRetry() {
-  const stations = await getLiveStations();
-  if (stations.length) return stations;
-
-  await wait(LIVE_REFRESH_RETRY_DELAY_MS);
-  return getLiveStations();
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"]+/g, (character) => {
-    switch (character) {
-      case '&': return '&amp;';
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '"': return '&quot;';
-      default: return character;
-    }
-  });
-}
-
-function formatTags(rawTags, maxLength = 96) {
-  if (!rawTags) return 'No tags';
-  const normalized = String(rawTags)
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 8)
-    .join(', ');
-
-  if (!normalized) return 'No tags';
-  if (normalized.length <= maxLength) return normalized;
-  return `${normalized.slice(0, maxLength - 1).trim()}...`;
-}
-
-function getHashSelection(hashValue = window.location.hash) {
-  const rawValue = String(hashValue || '').replace(/^#/, '').trim();
-  if (!rawValue) return null;
-
-  let normalized = rawValue.toLowerCase();
-  try {
-    normalized = decodeURIComponent(rawValue).toLowerCase();
-  } catch {
-    // Keep the normalized raw value when decoding fails.
-  }
-
-  const key = HASH_ALIASES[normalized] || normalized;
-  if (FILTER_KEYS.has(key)) {
-    return { type: 'filter', key };
-  }
-
-  if (REGION_KEYS.has(key)) {
-    return { type: 'region', key };
-  }
-
-  return null;
-}
-
-function applyHashSelection(hashValue = window.location.hash) {
-  const selection = getHashSelection(hashValue);
-  if (!selection) return false;
-
-  state.visibleCount = 18;
-
-  if (selection.type === 'filter') {
-    state.activeFilter = selection.key;
-    state.activeRegion = 'world';
-
-    if (selection.key === 'nearby') {
-      renderFilterChips();
-      renderRegionChips();
-      applyNearbyFilter();
-      return true;
-    }
-
-    applyFilters();
-    jumpToRegion('world');
-    return true;
-  }
-
-  state.activeFilter = 'all';
-  state.activeRegion = selection.key;
-  applyFilters();
-  jumpToRegion(selection.key);
-  return true;
-}
-
-function setStatus(message, tone = 'neutral') {
-  if (refs.statusMessage) {
-    refs.statusMessage.textContent = message;
-  }
-  if (refs.mapSummary && tone === 'live') {
-    refs.mapSummary.innerHTML = 'The live directory is active.<br>Search, filter, and jump around the atlas to discover stations.';
-  }
-  if (refs.mapSummary && tone === 'empty') {
-    refs.mapSummary.textContent = 'No stations matched this view. Try broadening your query or changing region and genre filters.';
-  }
-  if (refs.mapSummary && tone === 'preview') {
-    refs.mapSummary.textContent = 'Curated fallback stations are active while live data is loading or unavailable.';
-  }
-}
-
-function setMode(mode, message) {
-  state.mode = mode;
-  refs.modeLabel.textContent = mode === 'live' ? 'Live' : 'Preview';
-  refs.modeBadge.textContent = mode === 'live' ? 'Live' : 'Preview';
-  refs.liveBadge.textContent = mode === 'live' ? 'Live' : 'Preview';
-  updateStatusChip();
-  setStatus(message, mode);
-  updateStats();
-  syncSeoMetadata();
-}
-
-function updateStats() {
-  const stations = state.filteredStations;
-  const countries = new Set(stations.map((station) => station.country).filter(Boolean));
-  refs.stationCount.textContent = stations.length.toLocaleString();
-  refs.countryCount.textContent = countries.size.toLocaleString();
-  refs.featuredCount.textContent = state.featuredStations.length.toLocaleString();
-  refs.visibleCount.textContent = Math.min(state.visibleCount, stations.length).toLocaleString();
-}
-
-function applyLiveDirectory(stations, modeMessage, cacheUpdatedAt = Date.now()) {
-  state.liveCacheUpdatedAt = cacheUpdatedAt;
-  state.allStations = stations;
-  state.featuredStations = stations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
-  state.visibleCount = 18;
-  setMode('live', modeMessage);
-
-  if (state.activeFilter === 'nearby') {
-    applyNearbyFilter();
-    return;
-  }
-
-  applyFilters();
-}
-
-function getStationMatches(station) {
-  const haystack = [station.name, station.country, station.city, station.state, station.tags].join(' ').toLowerCase();
-  const queryMatch = !state.query || haystack.includes(state.query.toLowerCase());
-
-  let filterMatch = true;
-  switch (state.activeFilter) {
-    case 'music':
-      filterMatch = /music|pop|rock|indie|jazz|electronic|house|dance|alt|alternative|classical/.test(station.tags.toLowerCase());
-      break;
-    case 'news':
-      filterMatch = /news|world|business|talk|current|information/.test(station.tags.toLowerCase());
-      break;
-    case 'talk':
-      filterMatch = /talk|culture|speech|interview|debate|podcast/.test(station.tags.toLowerCase());
-      break;
-    case 'ambient':
-      filterMatch = /ambient|chill|lounge|lofi|downtempo|jazz|instrumental/.test(station.tags.toLowerCase());
-      break;
-    case 'nearby':
-      filterMatch = true;
-      break;
-    default:
-      filterMatch = true;
-  }
-
-  return queryMatch && filterMatch;
-}
-
-function filterByRegion(station) {
-  if (state.activeRegion === 'world') return true;
-
-  const bounds = regionBounds[state.activeRegion];
-  if (!bounds || !bounds.bounds) return true;
-  const [[south, west], [north, east]] = bounds.bounds;
-  return station.lat >= south && station.lat <= north && station.lng >= west && station.lng <= east;
-}
-
-function applyFilters() {
-  const source = state.allStations.slice();
-  const matches = source.filter((station) => getStationMatches(station) && filterByRegion(station));
-  state.filteredStations = matches;
-  state.visibleCount = Math.min(18, matches.length || 18);
-  refs.loadMoreBtn.disabled = matches.length <= state.visibleCount;
-
-  if (!matches.length) {
-    refs.mapTitle.textContent = 'No stations found';
-    setStatus('No stations matched your current search and filters.', 'empty');
-  } else if (state.query) {
-    refs.mapTitle.textContent = `Results for "${state.query}"`;
-    setStatus(`${matches.length.toLocaleString()} stations matched your search.`, state.mode);
-  } else {
-    refs.mapTitle.textContent = 'Global radio field';
-    setStatus(`${matches.length.toLocaleString()} stations available in this view.`, state.mode);
-  }
-
-  renderAll();
-}
-
-function renderFilterChips() {
-  refs.filterChips.innerHTML = filterGroups.map((group) => `
-    <button class="filter-button ${state.activeFilter === group.key ? 'active' : ''}" data-filter="${group.key}" type="button">${group.label}</button>
-  `).join('');
-}
-
-function renderRegionChips() {
-  const regions = [
-    { key: 'world', label: 'World' },
-    { key: 'americas', label: 'Americas' },
-    { key: 'europe', label: 'Europe' },
-    { key: 'asia', label: 'Asia' },
-    { key: 'africa', label: 'Africa' },
-    { key: 'oceania', label: 'Oceania' }
-  ];
-
-  refs.regionChips.innerHTML = regions.map((region) => `
-    <button class="segment-button ${state.activeRegion === region.key ? 'active' : ''}" data-region="${region.key}" type="button">${region.label}</button>
-  `).join('');
-  syncTopbarRegionButtons();
-}
-
-function syncTopbarRegionButtons() {
-  refs.topbarLinks?.querySelectorAll('[data-top-region]').forEach((button) => {
-    const isActive = button.dataset.topRegion === state.activeRegion;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', String(isActive));
-  });
-}
-
-function renderStyleChips() {
-  refs.styleChips.innerHTML = Object.entries(mapStyles).map(([key, style]) => `
-    <button class="segment-button ${state.activeStyle === key ? 'active' : ''}" data-style="${key}" type="button">${style.label}</button>
-  `).join('');
-}
-
-function renderFeaturedStations() {
-  const pool = state.featuredStations.slice().sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
-  refs.featuredList.innerHTML = '';
-
-  pool.forEach((station, index) => {
-    const item = document.createElement('article');
-    item.className = `featured-item ${state.selectedId === station.id ? 'is-active' : ''}`;
-    item.dataset.id = station.id;
-    const formattedTags = formatTags(station.tags, 88);
-    item.innerHTML = `
-      <button class="featured-button" type="button" data-play-id="${station.id}">
-        <div class="station-card-head">
-          <h3 class="featured-name">${escapeHtml(station.name)}</h3>
-          <span class="tiny-badge">${String(index + 1).padStart(2, '0')}</span>
-        </div>
-        <div class="featured-country">${escapeHtml(station.country)} ${station.city ? `· ${escapeHtml(station.city)}` : ''}</div>
-        <div class="featured-tags">${escapeHtml(formattedTags)} · ${station.votes.toLocaleString()} votes</div>
-      </button>
-    `;
-    refs.featuredList.appendChild(item);
-  });
-}
-
-function renderStationList() {
-  const visibleStations = state.filteredStations.slice(0, state.visibleCount);
-
-  if (!visibleStations.length) {
-    refs.stationList.innerHTML = `
-      <article class="station-empty">
-        <h3>No stations in this view</h3>
-        <p>Try clearing filters, switching region, or searching with a broader keyword.</p>
-      </article>
-    `;
-    refs.visibleCount.textContent = '0';
-    refs.loadMoreBtn.disabled = true;
-    refs.loadMoreBtn.hidden = true;
-    return;
-  }
-
-  refs.stationList.innerHTML = visibleStations.map((station) => {
-    const formattedTags = formatTags(station.tags, 84);
-    return `
-    <article class="station-item ${state.selectedId === station.id ? 'is-active' : ''}" data-id="${station.id}">
-      <button class="station-button" type="button" data-play-id="${station.id}">
-        <h3 class="station-name">${escapeHtml(station.name)}</h3>
-        <div class="station-location">${escapeHtml(station.country)}${station.city ? ` · ${escapeHtml(station.city)}` : ''}</div>
-        <div class="station-tags">${escapeHtml(formattedTags)}${station.votes ? ` · ${station.votes.toLocaleString()} votes` : ''}</div>
-      </button>
-    </article>
-  `;
-  }).join('');
-
-  refs.visibleCount.textContent = Math.min(state.visibleCount, state.filteredStations.length).toLocaleString();
-  refs.loadMoreBtn.disabled = state.visibleCount >= state.filteredStations.length;
-  refs.loadMoreBtn.hidden = state.visibleCount >= state.filteredStations.length;
-}
-
-function renderMapMarkers() {
-  if (!clusterLayer) return;
-  const token = ++state.markerToken;
-  clusterLayer.clearLayers();
-  state.stationLayers.clear();
-
-  const markers = state.filteredStations.map((station) => {
-    const formattedTags = formatTags(station.tags, 86);
-    const icon = L.divIcon({
-      className: '',
-      html: `<span class="signal-marker ${state.selectedId === station.id ? 'is-selected' : ''}"></span>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
-    });
-
-    const marker = L.marker([station.lat, station.lng], { icon, title: station.name });
-    const popupHtml = `
-      <div class="popup-card">
-        <h4>${escapeHtml(station.name)}</h4>
-        <p>${escapeHtml(station.country)}${station.city ? ` · ${escapeHtml(station.city)}` : ''}</p>
-        <p>${escapeHtml(formattedTags)}</p>
-        <p>${station.votes ? `${station.votes.toLocaleString()} votes` : 'Live radio station'}</p>
-        <button class="primary-button" type="button" data-popup-play="${station.id}">Play this station</button>
+function renderSkeletons(count = 40) {
+  const grid = document.getElementById('all-stations-grid');
+  if (!grid) return;
+  const card = () => `
+    <div class="skeleton-card">
+      <div class="skeleton-logo skeleton-base"></div>
+      <div class="skeleton-info">
+        <div class="skeleton-title skeleton-base"></div>
+        <div class="skeleton-sub skeleton-base"></div>
+        <div class="skeleton-tag skeleton-base"></div>
       </div>
-    `;
+      <div class="skeleton-btn skeleton-base"></div>
+    </div>
+  `;
+  grid.innerHTML = Array.from({ length: count }, card).join('');
 
-    marker.bindPopup(popupHtml, { maxWidth: 260, className: 'atlas-popup' });
-    marker.on('click', () => playStation(station));
-    marker.on('popupopen', (event) => {
-      const popupButton = event.popup.getElement()?.querySelector('[data-popup-play]');
-      if (popupButton) {
-        popupButton.addEventListener('click', () => playStation(station));
+  // Skeleton count bar
+  const counter = document.getElementById('station-count');
+  if (counter) {
+    counter.innerHTML = '<span class="skeleton-count skeleton-base"></span>';
+  }
+
+  // Hide load-more while loading
+  const loadMoreBtn = document.getElementById('btn-load-more');
+  if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+}
+
+function updatePlayerBar(station) {
+  const bar = document.getElementById('player-bar');
+  const name = document.getElementById('pb-name');
+  const loc = document.getElementById('pb-location');
+  const logo = document.getElementById('pb-logo');
+  const btn = document.getElementById('pb-play-pause');
+
+  bar.classList.add('visible');
+  name.textContent = station.name;
+  loc.textContent = station.city || station.country || '';
+  logo.textContent = '';
+  const logoInitial = document.createElement('span');
+  logoInitial.textContent = station.name.charAt(0).toUpperCase();
+  logo.appendChild(logoInitial);
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg>';
+}
+
+let playTimeoutId = null;
+
+function playStation(station) {
+  if (state.currentStation && state.currentStation.id === station.id) {
+    if (state.isPlaying) {
+      state.audio.pause();
+    } else {
+      // Safety check for restored sessions
+      if (!state.audio.src || state.audio.src === window.location.href) {
+        state.audio.src = station.url;
+      }
+      state.audio.play().catch(() => showToast('Failed to resume playback.'));
+    }
+    return;
+  }
+
+  state.currentStation = station;
+  document.body.classList.add('is-playing');
+  state.audio.src = station.url;
+  state.audio.volume = state.volume;
+  state.isPlaying = false;
+  
+  showToast(`Connecting to: ${station.name}...`);
+  updatePlayerBar(station);
+  highlightActiveStation(station.id);
+  
+  // Center map on station if coordinates exist
+  if (state.map && station.lat && station.lng) {
+    state.map.setView([station.lat, station.lng], 6);
+  }
+  
+  // Timeout for dead streams (10 seconds)
+  if (playTimeoutId) clearTimeout(playTimeoutId);
+  
+  const playPromise = state.audio.play();
+  
+  playTimeoutId = setTimeout(() => {
+    if (!state.isPlaying) {
+      state.audio.pause();
+      state.audio.src = '';
+      showToast('Stream timed out. Station may be offline.');
+    }
+  }, 10000);
+
+  playPromise
+    .then(() => {
+      state.isPlaying = true;
+      showToast(`Playing: ${station.name}`);
+      updateCityVideo(station);
+      
+      // Persist state for cross-page navigation
+      localStorage.setItem('world-radio-atlas.current-station', JSON.stringify(station));
+    })
+    .catch((err) => {
+      clearTimeout(playTimeoutId);
+      if (err.name !== 'AbortError') {
+        showToast('Could not play this station. Stream offline.');
       }
     });
-    state.stationLayers.set(station.id, marker);
-    return marker;
-  });
-
-  if (token === state.markerToken) {
-    clusterLayer.addLayers(markers);
-  }
 }
 
-function updateActiveCardStyles() {
-  document.querySelectorAll('.station-item, .featured-item').forEach((item) => {
-    const isActive = item.dataset.id === state.selectedId;
-    item.classList.toggle('is-active', isActive);
+let cityVideoRequestId = 0;
+
+async function updateCityVideo(stationOrLocation, stationName) {
+  const iframe = document.getElementById('city-video-iframe');
+  const wrapper = document.querySelector('.video-player-wrapper');
+  const cityNameEl = document.getElementById('video-city-name');
+  const stationNameEl = document.getElementById('video-station-playing');
+  const spinner = document.getElementById('video-spinner');
+  
+  if (!iframe || !wrapper || !stationOrLocation) return;
+
+  const requestId = ++cityVideoRequestId;
+  const station = typeof stationOrLocation === 'object'
+    ? stationOrLocation
+    : { name: stationName, city: stationOrLocation };
+  const locationLabel = [station.city || station.state, station.country].filter(Boolean).join(', ') || station.city || station.country || 'the world';
+
+  // Show searching state
+  wrapper.classList.add('loading');
+  if (spinner) {
+    const spinnerText = spinner.querySelector('span');
+    if (spinnerText) spinnerText.textContent = `Searching for ${station.city || station.country || 'city'} footage...`;
+  }
+
+  if (cityNameEl) cityNameEl.textContent = `Finding videos for ${locationLabel}`;
+  if (stationNameEl) stationNameEl.textContent = `Listening to ${station.name || stationName || 'live radio'}`;
+
+  let video = await resolveCityVideoForStation(station);
+  if (requestId !== cityVideoRequestId) return;
+
+  if (!video) {
+    const earthVideoId = cityVideos['Earth'];
+    video = {
+      embedUrl: buildEmbedUrl(earthVideoId),
+      title: 'Planet Earth',
+      videoId: earthVideoId,
+      matchedBy: 'global-default'
+    };
+  }
+
+  const videoUrl = video.embedUrl;
+  
+  // Set up one-time load listener for this specific request
+  iframe.onload = () => {
+    if (requestId === cityVideoRequestId) {
+      wrapper.classList.remove('loading');
+    }
+  };
+
+  if (videoUrl && iframe.src !== videoUrl) {
+    iframe.src = videoUrl;
+  } else {
+    // If URL is the same, onload won't fire, so remove loading immediately
+    wrapper.classList.remove('loading');
+  }
+  
+  wrapper.classList.add('has-video');
+  
+  if (cityNameEl) cityNameEl.textContent = `Exploring ${locationLabel}`;
+  if (stationNameEl) stationNameEl.textContent = `Listening to ${station.name || stationName || 'live radio'}`;
+}
+
+
+
+
+function highlightActiveStation(stationId) {
+  const pauseIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>';
+  const playIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4v16l12-8z"/></svg>';
+
+  // Update all station cards (grid and featured)
+  document.querySelectorAll('.station-card').forEach(card => {
+    const playBtn = card.querySelector('.st-play, .st-play-small');
+    const cardId = card.dataset.stationId || playBtn?.dataset.stationId;
+    const cardName = card.dataset.stationName || playBtn?.dataset.stationName;
+    
+    let isThisActive = false;
+    
+    if (stationId && cardId === stationId) {
+      isThisActive = true;
+    } else if (cardName && state.currentStation && cardName === state.currentStation.name) {
+      isThisActive = true;
+    }
+    
+    card.classList.toggle('active', isThisActive);
+    
+    const btn = card.querySelector('.st-play, .st-play-small');
+    if (btn) {
+      btn.innerHTML = (isThisActive && state.isPlaying) ? pauseIcon : playIcon;
+    }
   });
 
-  state.stationLayers.forEach((marker, stationId) => {
-    const element = marker.getElement();
-    if (!element) return;
-    const markerNode = element.querySelector('.signal-marker');
-    if (markerNode) {
-      markerNode.classList.toggle('is-selected', stationId === state.selectedId);
+  // Update search results
+  document.querySelectorAll('.search-result-item').forEach(item => {
+    const cardId = item.dataset.stationId;
+    const isThisActive = stationId && cardId === stationId;
+    
+    item.classList.toggle('active', isThisActive);
+    const btn = item.querySelector('.sr-play-btn');
+    if (btn) {
+      btn.innerHTML = (isThisActive && state.isPlaying) ? pauseIcon : playIcon;
     }
   });
 }
 
-function renderAll() {
-  renderFilterChips();
-  renderRegionChips();
-  renderStyleChips();
-  renderFeaturedStations();
-  renderStationList();
-  renderMapMarkers();
-  updateStats();
-  updateActiveCardStyles();
-  syncSeoMetadata();
-}
+function updateMapMarkers(stations) {
+  if (!state.clusters || !document.getElementById('map')) return;
+  state.clusters.clearLayers();
+  
+  // Featured IDs to show large labels for
+  const featuredIds = ['wfmu-new-jersey', 'bbc-world-service', 'fip-france', 'radio-538', 'rthk-radio-3', 'triple-j'];
+  const colors = ['sl-blue', 'sl-red', 'sl-purple', 'sl-green', 'sl-yellow', 'sl-blue'];
 
-function showToast(message) {
-  refs.toast.textContent = message;
-  refs.toast.classList.add('is-visible');
-  window.clearTimeout(showToast._timer);
-  showToast._timer = window.setTimeout(() => {
-    refs.toast.classList.remove('is-visible');
-  }, 2600);
-}
+  stations.forEach((station, index) => {
+    if (station.lat === null || station.lng === null) return;
+    
+    let marker;
+    // Show large labels for specific featured stations or a few top ones if from API
+    const isFeatured = featuredIds.includes(station.id) || 
+                       (stations.length > 5000 && index < 8 && station.lat && station.lng);
+    
+    if (isFeatured) {
+      const colorClass = colors[index % colors.length];
+      const icon = L.divIcon({
+        className: 'station-label-marker',
+        html: `
+          <div class="station-label">
+            <div class="sl-icon-wrapper ${colorClass}">
+              <div class="sl-pulse"></div>
+              <div class="sl-icon-dot"></div>
+            </div>
+            <div class="sl-content">
+              <span class="sl-name">${escapeHtml(station.name.split(' ').slice(0,3).join(' '))}</span>
+              <span class="sl-meta">${escapeHtml(station.city || station.country || 'Live')}</span>
+            </div>
+            <div class="sl-play">
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+          </div>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+      marker = L.marker([station.lat, station.lng], { icon, zIndexOffset: 1000 });
+    } else {
+      const icon = L.divIcon({
+        className: 'custom-map-dot',
+        iconSize: [8, 8]
+      });
+      marker = L.marker([station.lat, station.lng], { icon });
+    }
 
-function applyTileAltText(tileImage) {
-  if (!(tileImage instanceof HTMLImageElement)) return;
-  tileImage.alt = MAP_TILE_ALT_TEXT;
-}
-
-function enforceTileAltTextOnLayer(tileLayer) {
-  tileLayer.on('tileloadstart', (event) => {
-    applyTileAltText(event.tile);
+    marker.on('click', () => playStation(station));
+    state.clusters.addLayer(marker);
   });
-
-  tileLayer.on('tileload', (event) => {
-    applyTileAltText(event.tile);
-  });
 }
 
-function sweepMapTileAltText() {
-  refs.map?.querySelectorAll('.leaflet-tile').forEach((tile) => {
-    applyTileAltText(tile);
-  });
+function initAudioEffect() {
+  if (state.audioCtx) return;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  
+  state.audioCtx = new AudioContext();
+  state.audioSource = state.audioCtx.createMediaElementSource(state.audio);
+  
+  // Create filters
+  state.audioFilters.bass = state.audioCtx.createBiquadFilter();
+  state.audioFilters.bass.type = 'lowshelf';
+  state.audioFilters.bass.frequency.value = 150;
+  state.audioFilters.bass.gain.value = 0;
+  
+  state.audioFilters.treble = state.audioCtx.createBiquadFilter();
+  state.audioFilters.treble.type = 'highshelf';
+  state.audioFilters.treble.frequency.value = 4000;
+  state.audioFilters.treble.gain.value = 0;
+  
+  // Connect graph
+  state.audioSource
+    .connect(state.audioFilters.bass)
+    .connect(state.audioFilters.treble)
+    .connect(state.audioCtx.destination);
+}
+
+function applyAudioStyle(style) {
+  initAudioEffect();
+  if (state.audioCtx && state.audioCtx.state === 'suspended') {
+    state.audioCtx.resume();
+  }
+  
+  state.currentAudioStyle = style;
+  if (!state.audioFilters.bass) return;
+  
+  // Reset
+  state.audioFilters.bass.gain.value = 0;
+  state.audioFilters.treble.gain.value = 0;
+  
+  switch(style) {
+    case 'bass':
+      state.audioFilters.bass.gain.value = 15;
+      break;
+    case 'tone':
+      state.audioFilters.treble.gain.value = 12;
+      break;
+    case 'soft':
+      state.audioFilters.treble.gain.value = -10;
+      state.audioFilters.bass.gain.value = 5;
+      break;
+    case 'atmos':
+      state.audioFilters.bass.gain.value = 8;
+      state.audioFilters.treble.gain.value = 8;
+      break;
+    case 'normal':
+    default:
+      break;
+  }
+  showToast(`Audio Style: ${style.charAt(0).toUpperCase() + style.slice(1)}`);
 }
 
 function initializeMap() {
-  const defaultView = regionBounds.world;
-  map = L.map(refs.map, {
-    zoomControl: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    zoomSnap: 0.5,
-    fadeAnimation: true,
-    zoomAnimation: true,
-    markerZoomAnimation: true
-  }).setView(defaultView.center, defaultView.zoom);
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
 
-  Object.entries(mapStyles).forEach(([key, style]) => {
-    const tileLayer = L.tileLayer(style.url, style.options);
-    enforceTileAltTextOnLayer(tileLayer);
-    state.baseLayers[key] = tileLayer;
+  const mapInstance = L.map('map', {
+    center: [20, 0],
+    zoom: 2,
+    zoomControl: false,
+    attributionControl: false,
+    worldCopyJump: true
   });
 
-  clusterLayer = L.markerClusterGroup({
-    chunkedLoading: true,
-    removeOutsideVisibleBounds: true,
-    disableClusteringAtZoom: 11,
-    maxClusterRadius: 56,
-    iconCreateFunction(cluster) {
-      return L.divIcon({
-        html: `<div class="cluster-marker">${cluster.getChildCount()}</div>`,
-        className: '',
-        iconSize: [42, 42]
-      });
-    }
+  const baseLayer = L.tileLayer(mapStyles.night.url, mapStyles.night.options);
+  baseLayer.addTo(mapInstance);
+
+  state.clusters = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 40,
+    spiderfyOnMaxZoom: true,
+    disableClusteringAtZoom: 16
   });
 
-  state.baseLayers[state.activeStyle].addTo(map);
-  map.addLayer(clusterLayer);
-  map.on('zoomend moveend layeradd', sweepMapTileAltText);
-  map.on('click zoomstart dragstart', collapseMapOverlay);
-  clusterLayer.on('clusterclick click', collapseMapOverlay);
-  window.setTimeout(sweepMapTileAltText, 0);
+  updateMapMarkers(state.allStations);
+
+  // Add Custom Map Overlays (Atmosphere controls)
+  const controlsHTML = `
+    <div class="map-controls-custom">
+      <div class="ctrl-group">
+        <button id="zoom-in" title="Zoom In">+</button>
+        <button id="zoom-out" title="Zoom Out">-</button>
+      </div>
+      <button class="ctrl-btn" id="locate-me" title="My Location">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+      </button>
+    </div>
+    <div class="city-videos-overlay">
+      <div class="cv-tag">
+        <h5>City Videos</h5>
+        <p>See the Cities, Feel the Vibes</p>
+      </div>
+    </div>
+  `;
+  const heroRight = document.querySelector('.hero-right');
+  if (heroRight) {
+    heroRight.insertAdjacentHTML('beforeend', controlsHTML);
+  }
+
+  state.map = mapInstance;
+  mapInstance.addLayer(state.clusters);
+
+  // Auto-invalidate size to fix layout issues
+  setTimeout(() => mapInstance.invalidateSize(), 500);
 }
 
-function applyMapStyle(styleKey) {
-  if (!state.baseLayers[styleKey] || styleKey === state.activeStyle) return;
+function initVideoPage() {
+  const suggestionsGrid = document.getElementById('suggestions-grid');
+  if (!suggestionsGrid) return;
 
-  state.baseLayers[state.activeStyle].removeFrom(map);
-  state.baseLayers[styleKey].addTo(map);
-  state.activeStyle = styleKey;
-  renderStyleChips();
-}
+  const cities = Object.keys(cityVideos).slice(0, 8);
+  suggestionsGrid.innerHTML = cities.map(city => `
+    <div class="suggestion-card" data-city="${city}">
+      <img src="https://images.unsplash.com/photo-1449034446853-66c86144b0ad?auto=format&fit=crop&w=400&q=80" alt="${city}">
+      <div class="suggestion-overlay">
+        <h4>${city}</h4>
+        <p>Watch 4K Atmosphere</p>
+      </div>
+    </div>
+  `).join('');
 
-function jumpToRegion(regionKey) {
-  const preset = regionBounds[regionKey];
-  if (!preset || !map) return;
-
-  if (preset.bounds) {
-    map.fitBounds(preset.bounds, { padding: [26, 26] });
-  } else if (preset.center) {
-    map.flyTo(preset.center, preset.zoom || 3, { duration: 1.05 });
-  }
-}
-
-function getSelectedStation() {
-  if (!state.selectedId) return null;
-
-  return state.allStations.find((station) => station.id === state.selectedId)
-    || state.filteredStations.find((station) => station.id === state.selectedId)
-    || null;
-}
-
-function focusMapView() {
-  if (state.mapPanelView !== 'map') {
-    setMapPanelView('map', { quiet: true });
-  }
-
-  if (!map) return;
-
-  const selectedStation = getSelectedStation();
-  if (selectedStation && Number.isFinite(selectedStation.lat) && Number.isFinite(selectedStation.lng)) {
-    map.flyTo([selectedStation.lat, selectedStation.lng], Math.max(map.getZoom(), 5), { duration: 0.8 });
-    const marker = state.stationLayers.get(selectedStation.id);
-    if (marker) marker.openPopup();
-  } else if (state.activeRegion && regionBounds[state.activeRegion]) {
-    jumpToRegion(state.activeRegion);
-  } else {
-    jumpToRegion('world');
-  }
-
-  const mapPanel = refs.map?.closest('.map-panel');
-  if (!mapPanel) return;
-
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-  const rect = mapPanel.getBoundingClientRect();
-  const isMostlyVisible = rect.top < viewportHeight * 0.68 && rect.bottom > viewportHeight * 0.32;
-
-  if (!isMostlyVisible) {
-    mapPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.setTimeout(() => map?.invalidateSize(), 260);
-    return;
-  }
-
-  map.invalidateSize();
-}
-
-async function getLiveStations() {
-  let lastError;
-
-  for (const endpoint of API_ENDPOINTS) {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), LIVE_FETCH_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(endpoint, {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
-        cache: 'no-store'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const payload = await response.json();
-      const stations = sanitizeStations(payload);
-
-      if (stations.length) {
-        return stations;
-      }
-
-      throw new Error('No geocoded stations returned.');
-    } catch (error) {
-      lastError = error;
-      console.warn(`Live endpoint failed: ${endpoint}`, error);
-    } finally {
-      window.clearTimeout(timeout);
-    }
-  }
-
-  if (lastError) {
-    console.warn('All live endpoints failed. Falling back to curated preview.', lastError);
-  }
-
-  return [];
-}
-
-function matchesNearby(station) {
-  return Boolean(station.lat && station.lng);
-}
-
-async function ensureUserLocation() {
-  if (state.userLocation) {
-    return state.userLocation;
-  }
-
-  if (!navigator.geolocation) {
-    throw new Error('Geolocation is unavailable in this browser.');
-  }
-
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        state.userLocation = [position.coords.latitude, position.coords.longitude];
-        resolve(state.userLocation);
-      },
-      reject,
-      {
-        enableHighAccuracy: false,
-        maximumAge: 600000,
-        timeout: 9000
-      }
-    );
+  suggestionsGrid.querySelectorAll('.suggestion-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const city = card.dataset.city;
+      // Find a station in this city if possible
+      const station = state.allStations.find(s => s.city && s.city.includes(city)) || 
+                      fallbackStations.find(s => s.city && s.city.includes(city)) || 
+                      fallbackStations[0];
+      playStation(station);
+    });
   });
+
+  // If a station is already playing, sync the video immediately
+  if (state.currentStation && state.isPlaying) {
+    updateCityVideo(state.currentStation);
+  }
 }
 
-function haversineDistance(lat1, lng1, lat2, lng2) {
-  const toRad = (value) => (value * Math.PI) / 180;
-  const radius = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * radius * Math.asin(Math.sqrt(a));
-}
 
-async function applyNearbyFilter() {
-  try {
-    const [lat, lng] = await ensureUserLocation();
-    const nearby = state.allStations
-      .filter(matchesNearby)
-      .map((station) => ({
-        station,
-        distance: haversineDistance(lat, lng, station.lat, station.lng)
-      }))
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 120)
-      .map((item) => item.station);
+// --- GLOBAL EVENT LISTENERS (One-time binding) ---
+function initGlobalListeners() {
+  // Seamless SPA Navigation
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
 
-    if (!nearby.length) {
-      state.filteredStations = [];
-      state.visibleCount = 0;
-      refs.mapTitle.textContent = 'No nearby stations';
-      setStatus('No nearby stations were found. Try a different filter.', 'empty');
-      renderAll();
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+
+    // Anchor links (e.g., #about)
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      if (href === '#') {
+        showToast(link.textContent.trim() + ' section coming soon!');
+        return;
+      }
+      // If we're NOT on the home page, navigate there first, then scroll
+      const isHome = window.location.pathname === '/' || window.location.pathname === '/index.html';
+      if (!isHome) {
+        navigateTo('/').then(() => {
+          setTimeout(() => {
+            const target = document.querySelector(href);
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+          }, 300);
+        });
+        return;
+      }
+      // On the home page, scroll directly to the section
+      const target = document.querySelector(href);
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
       return;
     }
 
-    state.filteredStations = nearby;
-    state.visibleCount = Math.min(18, nearby.length || 18);
-    refs.mapTitle.textContent = 'Nearby stations';
-    setStatus('Showing stations closest to your current location.');
-    if (map) {
-      map.flyTo([lat, lng], 5, { duration: 1.1 });
-    }
-    renderAll();
-  } catch (error) {
-    showToast('Location access is blocked. Showing the wider directory instead.');
-    state.activeFilter = 'all';
-    renderFilterChips();
-    applyFilters();
-  }
-}
+    // Internal links (Home, Browse, Videos)
+    const isInternal = href.startsWith('/') || 
+                       href.startsWith(window.location.origin) || 
+                       !href.includes('://');
 
-function selectStation(station, shouldAutoplay = false) {
-  const formattedTags = formatTags(station.tags, 90);
-  state.selectedId = station.id;
-  state.selectedCityVideo = resolveCityVideoForStation(station);
-  refs.nowPlayingArt.textContent = station.name
-    .split(' ')
-    .slice(0, 2)
-    .map((part) => part[0] || '')
-    .join('')
-    .toUpperCase();
-  refs.nowPlayingTitle.textContent = station.name;
-  refs.nowPlayingMeta.textContent = `${station.country}${station.city ? ` · ${station.city}` : ''}`;
-  refs.trackStats.textContent = `${formattedTags} · ${station.votes ? `${station.votes.toLocaleString()} votes` : 'Community station'}`;
-  refs.playPauseBtn.textContent = state.isPlaying && audio.src === station.url ? 'Pause' : 'Play';
-  refs.mapTitle.textContent = `${station.country} / ${station.name}`;
-  updateActiveCardStyles();
-
-  const marker = state.stationLayers.get(station.id);
-  if (marker) {
-    marker.openPopup();
-  }
-
-  if (map && Number.isFinite(station.lat) && Number.isFinite(station.lng)) {
-    map.flyTo([station.lat, station.lng], Math.max(map.getZoom(), 5), { duration: 0.8 });
-  }
-
-  if (state.mapPanelView === 'video') {
-    renderCityVideoPane(station);
-  }
-
-  if (shouldAutoplay) {
-    playStation(station);
-  }
-
-  syncSeoMetadata();
-}
-
-function playStation(station) {
-  selectStation(station, false);
-  audio.src = station.url;
-
-  if (state.spatialAudioMode !== 'off') {
-    const spatialReady = activateSpatialAudioMode(state.spatialAudioMode);
-    if (!spatialReady) {
-      scheduleSpatialAudioRetry(state.spatialAudioMode);
-    }
-  }
-
-  audio.play()
-    .then(() => {
-      state.isPlaying = true;
-      refs.playPauseBtn.textContent = 'Pause';
-      refs.trackStats.textContent = `${station.tags || 'Signal ready'} · streaming now`;
-      if (state.spatialAudioMode !== 'off') {
-        const spatialReady = activateSpatialAudioMode(state.spatialAudioMode);
-        if (!spatialReady) {
-          scheduleSpatialAudioRetry(state.spatialAudioMode);
-        }
+    if (isInternal) {
+      const url = new URL(href, window.location.origin);
+      const targetPath = url.pathname;
+      const currentPath = window.location.pathname;
+      
+      // If already on the target page, just scroll to top
+      if (targetPath === currentPath || (targetPath === '/' && currentPath === '/index.html')) {
+        if (url.hash) return; 
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
       }
-      playUiSuccessCue();
-    })
-    .catch(() => {
-      state.isPlaying = false;
-      refs.playPauseBtn.textContent = 'Play';
-      showToast('This stream did not start. Try another station.');
-      playUiErrorCue();
-    });
-}
 
-function pausePlayback() {
-  audio.pause();
-  state.isPlaying = false;
-  refs.playPauseBtn.textContent = 'Play';
-}
+      e.preventDefault();
+      navigateTo(href);
+    }
+  });
 
-function togglePlayback() {
-  const current = getSelectedStation();
-  if (!current) {
-    showToast('Pick a station first.');
-    return;
-  }
+  // Global Keydown (Escape for modals)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('search-overlay');
+      if (overlay?.classList.contains('active')) {
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+      const mobileNav = document.getElementById('mobile-nav-overlay');
+      if (mobileNav?.classList.contains('open')) {
+        mobileNav.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
+  });
 
-  if (state.isPlaying) {
-    pausePlayback();
-    return;
-  }
-
-  playStation(current);
-}
-
-function resetFilters() {
-  state.activeFilter = 'all';
-  state.activeRegion = 'world';
-  state.query = '';
-  state.visibleCount = 18;
-  refs.searchInput.value = '';
-  applyFilters();
-  jumpToRegion('world');
-  setStatus('Filters cleared. Back to the world view.');
-}
-
-function shuffleFeatured() {
-  state.featuredStations = state.featuredStations
-    .slice()
-    .sort(() => Math.random() - 0.5);
-  renderFeaturedStations();
-  showToast('Featured signals shuffled.');
-}
-
-function renderMoreStations() {
-  state.visibleCount = Math.min(state.visibleCount + 18, state.filteredStations.length);
-  renderStationList();
-  showToast('More stations loaded.');
+  // Popstate for back/forward buttons
+  window.addEventListener('popstate', () => {
+    navigateTo(window.location.pathname, false);
+  });
 }
 
 function bindEvents() {
-  window.addEventListener('pointerdown', markUserInteraction, { passive: true });
-  window.addEventListener('keydown', markUserInteraction, { passive: true });
-
-  refs.topbarLinks?.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-top-region]');
-    if (!button) return;
-    state.activeRegion = button.dataset.topRegion;
-    state.activeFilter = 'all';
-    state.query = '';
-    refs.searchInput.value = '';
-    state.visibleCount = 18;
-    renderFilterChips();
-    renderRegionChips();
-    applyFilters();
-    jumpToRegion(state.activeRegion);
+  // Station Card Play Buttons
+  document.querySelectorAll('.st-play').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.stationName;
+      let station = state.allStations.find(s => s.name === name);
+      if (!station) station = fallbackStations.find(s => s.name === name);
+      if (station) playStation(station);
+    };
   });
 
-  refs.uiSoundToggle.addEventListener('click', () => {
-    markUserInteraction();
-    state.uiSoundsEnabled = !state.uiSoundsEnabled;
-    writeUiSoundPreference(state.uiSoundsEnabled);
-    syncUiSoundToggle();
-    showToast(state.uiSoundsEnabled ? 'UI sounds enabled.' : 'UI sounds disabled.');
-  });
-
-  refs.uiSoundProfileToggle.addEventListener('click', () => {
-    markUserInteraction();
-    const profileKeys = Object.keys(UI_SOUND_PROFILES);
-    const currentIndex = profileKeys.indexOf(state.uiSoundProfile);
-    const nextProfile = profileKeys[(currentIndex + 1) % profileKeys.length] || 'soft';
-    state.uiSoundProfile = nextProfile;
-    writeUiSoundProfilePreference(nextProfile);
-    syncUiSoundProfileToggle();
-    showToast(`Sound profile set to ${getUiSoundProfile().label}.`);
-  });
-
-  refs.spatialAudioToggle.addEventListener('click', () => {
-    markUserInteraction();
-    const currentIndex = SPATIAL_AUDIO_MODES.indexOf(state.spatialAudioMode);
-    const nextMode = SPATIAL_AUDIO_MODES[(currentIndex + 1) % SPATIAL_AUDIO_MODES.length] || 'off';
-
-    state.spatialAudioMode = nextMode;
-    writeSpatialAudioPreference(nextMode);
-    syncSpatialAudioToggle();
-
-    if (nextMode === 'off') {
-      applySpatialAudioMode('off');
-      showToast(`Spatial audio set to ${SPATIAL_AUDIO_LABELS.off}.`);
-      return;
-    }
-
-    const hasStreamSource = Boolean(audio.currentSrc || audio.src);
-    if (!hasStreamSource) {
-      showToast(`Spatial audio ${SPATIAL_AUDIO_LABELS[nextMode]} is armed. Start a station to activate.`);
-      return;
-    }
-
-    const spatialReady = activateSpatialAudioMode(nextMode);
-    if (spatialReady) {
-      showToast(`Spatial audio set to ${SPATIAL_AUDIO_LABELS[nextMode]}.`);
-      return;
-    }
-
-    showToast('Initializing spatial audio...');
-    scheduleSpatialAudioRetry(nextMode);
-  });
-
-  refs.mapViewSwitch.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-stage-view]');
-    if (!button) return;
-    setMapPanelView(button.dataset.stageView);
-  });
-
-  refs.mapOverlayToggle?.addEventListener('click', () => {
-    setMapOverlayCollapsed(!state.isMapOverlayCollapsed);
-  });
-
-  document.addEventListener('click', (event) => {
-    const targetButton = event.target.closest('button');
-    if (!targetButton) return;
-    playUiClickCue();
-  });
-
-  refs.refreshStations.addEventListener('click', async () => {
-    const defaultLabel = 'Refresh directory';
-    const hasLiveDataInView = state.mode === 'live' && state.allStations.length > 0;
-    refs.refreshStations.textContent = 'Refreshing...';
-    setStatus('Refreshing the live directory...');
-    refs.refreshStations.disabled = true;
-    try {
-      const liveStations = await getLiveStationsWithRetry();
-      if (liveStations.length) {
-        const cachedAt = writeCachedLiveStations(liveStations);
-        state.activeFilter = 'all';
-        state.activeRegion = 'world';
-        applyLiveDirectory(
-          liveStations,
-          `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`,
-          cachedAt
-        );
-        jumpToRegion('world');
-      } else if (hasLiveDataInView) {
-        setStatus('Could not refresh right now. Continuing with your cached stations.', 'live');
-        showToast('Refresh failed. Still using cached stations.');
-      } else {
-        setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
+  // Make entire station card clickable
+  document.querySelectorAll('.station-card').forEach(card => {
+    card.onclick = (e) => {
+      if (e.target.closest('button')) return;
+      const btn = card.querySelector('.st-play, .st-play-small');
+      if (btn) {
+        const name = btn.dataset.stationName || card.dataset.stationName;
+        const id = card.dataset.stationId;
+        let station = state.allStations.find(s => s.id === id || s.name === name);
+        if (!station) station = fallbackStations.find(s => s.id === id || s.name === name);
+        if (station) playStation(station);
       }
-    } catch (error) {
-      if (hasLiveDataInView) {
-        setStatus('Could not refresh right now. Continuing with your cached stations.', 'live');
-        showToast('Refresh failed. Still using cached stations.');
-      } else {
-        setMode('preview', 'Could not reach the live directory, so the curated preview stays active.');
-      }
-    } finally {
-      refs.refreshStations.disabled = false;
-      refs.refreshStations.textContent = defaultLabel;
-    }
+    };
   });
 
-  refs.clearFilters.addEventListener('click', resetFilters);
-  refs.nearMeButton.addEventListener('click', () => {
-    state.activeFilter = 'nearby';
-    renderFilterChips();
-    applyNearbyFilter();
-  });
-  refs.shuffleFeatured.addEventListener('click', shuffleFeatured);
-  refs.playPauseBtn.addEventListener('click', togglePlayback);
-  refs.focusMapButton.addEventListener('click', () => {
-    focusMapView();
-  });
-
-  refs.loadMoreBtn.addEventListener('click', renderMoreStations);
-  refs.volumeSlider.addEventListener('input', (event) => {
-    audio.volume = Number(event.target.value) / 100;
-  });
-
-  refs.searchInput.addEventListener('input', () => {
-    state.query = refs.searchInput.value.trim();
-    if (state.activeFilter === 'nearby') {
-      state.activeFilter = 'all';
-      renderFilterChips();
-    }
-    state.visibleCount = 18;
-    applyFilters();
-  });
-
-  refs.filterChips.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-filter]');
-    if (!button) return;
-    state.activeFilter = button.dataset.filter;
-    renderFilterChips();
-    if (state.activeFilter === 'nearby') {
-      applyNearbyFilter();
-      return;
-    }
-    state.visibleCount = 18;
-    applyFilters();
-  });
-
-  refs.regionChips.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-region]');
-    if (!button) return;
-    state.activeRegion = button.dataset.region;
-    renderRegionChips();
-    applyFilters();
-    jumpToRegion(state.activeRegion);
-  });
-
-  refs.styleChips.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-style]');
-    if (!button) return;
-    applyMapStyle(button.dataset.style);
-    renderStyleChips();
-  });
-
-  document.addEventListener('click', (event) => {
-    const playButton = event.target.closest('[data-play-id]');
-    if (playButton) {
-      const stationId = playButton.dataset.playId;
-      const station = state.allStations.find((item) => item.id === stationId);
-      if (station) {
-        playStation(station);
+  // Listen Live / Random Station
+  const listenLiveBtn = document.querySelector('#nav-listen-live');
+  if (listenLiveBtn) listenLiveBtn.onclick = () => {
+    if (state.allStations.length > 0) {
+      const random = state.allStations[Math.floor(Math.random() * state.allStations.length)];
+      playStation(random);
+      if (state.map && random.lat) {
+        state.map.setView([random.lat, random.lng], 4);
       }
     }
-  });
+  };
 
-  audio.addEventListener('ended', () => {
-    pausePlayback();
-  });
+  // Explore Radio
+  const exploreBtn = document.querySelector('#btn-explore-radio');
+  if (exploreBtn) exploreBtn.onclick = () => {
+    if (state.allStations.length > 0) {
+      const random = state.allStations[Math.floor(Math.random() * state.allStations.length)];
+      playStation(random);
+      const mapEl = document.querySelector('#map');
+      if (mapEl) {
+        mapEl.scrollIntoView({ behavior: 'smooth' });
+        if (state.map && random.lat) {
+          state.map.setView([random.lat, random.lng], 5);
+        }
+      }
+    }
+  };
 
-  audio.addEventListener('error', () => {
+  // Scroll to map buttons
+  const openMapBtn = document.querySelector('#btn-open-map');
+  if (openMapBtn) openMapBtn.onclick = () => {
+    document.querySelector('#map')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const pbCloseBtn = document.getElementById('pb-close-btn');
+  if (pbCloseBtn) pbCloseBtn.onclick = () => {
+    state.audio.pause();
+    state.audio.src = '';
     state.isPlaying = false;
-    refs.playPauseBtn.textContent = 'Play';
-    playUiErrorCue();
-  });
+    state.currentStation = null;
+    document.getElementById('player-bar').classList.remove('visible');
+    localStorage.removeItem('world-radio-atlas.current-station');
+    highlightActiveStation(null);
+    document.body.classList.remove('is-playing');
+  };
 
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => {
-      if (map) {
-        map.invalidateSize();
+  const pbPlayPauseBtn = document.getElementById('pb-play-pause');
+  if (pbPlayPauseBtn) {
+    pbPlayPauseBtn.onclick = () => {
+      if (!state.currentStation) return;
+      
+      // Ensure source is set (important for restored sessions)
+      if (!state.audio.src || state.audio.src === window.location.href) {
+        state.audio.src = state.currentStation.url;
       }
-    }, 160);
-  }, { passive: true });
 
-  window.addEventListener('hashchange', () => {
-    applyHashSelection(window.location.hash);
+      if (state.isPlaying) {
+        state.audio.pause();
+      } else {
+        state.audio.play().catch((err) => {
+          console.error('Playback failed:', err);
+          showToast('Failed to resume playback. Try another station.');
+        });
+      }
+    };
+  }
+
+  // Nav Actions (Search & Map Theme)
+  const iconBtns = document.querySelectorAll('.landing-nav-actions .icon-btn');
+  if (iconBtns.length >= 2) {
+    const searchBtn = iconBtns[0];
+    const themeBtn = iconBtns[1];
+
+    searchBtn.onclick = () => {
+      document.getElementById('search-overlay').classList.add('active');
+      document.getElementById('global-search-input').focus();
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeSearchBtn = document.getElementById('close-search-btn');
+    if (closeSearchBtn) closeSearchBtn.onclick = () => {
+      document.getElementById('search-overlay').classList.remove('active');
+      document.body.style.overflow = '';
+    };
+
+    const searchOverlay = document.getElementById('search-overlay');
+    if (searchOverlay) searchOverlay.onclick = (e) => {
+      if (e.target.id === 'search-overlay') {
+        searchOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    };
+
+    themeBtn.onclick = () => {
+      if (!state.map) {
+        showToast("Map theme updated (Go Home to see it)");
+        return;
+      }
+      const layers = [];
+      state.map.eachLayer(l => { if (l instanceof L.TileLayer) layers.push(l); });
+      const currentUrl = layers[0] ? layers[0]._url : '';
+      const newStyle = currentUrl.includes('dark_all') ? 'paper' : 'night';
+      
+      layers.forEach(l => state.map.removeLayer(l));
+      L.tileLayer(mapStyles[newStyle].url, mapStyles[newStyle].options).addTo(state.map);
+      if (state.clusters) state.map.addLayer(state.clusters);
+      showToast(`Map theme updated to ${mapStyles[newStyle].label}`);
+    };
+  }
+
+  // Global search input
+  const searchInput = document.getElementById('global-search-input');
+  if (searchInput) {
+    let searchTimeout;
+    searchInput.oninput = (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const resultsContainer = document.getElementById('global-search-results');
+      if (!query) {
+        resultsContainer.innerHTML = '<div class="search-placeholder"><p>Type to search through 60,000+ stations...</p></div>';
+        return;
+      }
+      const matches = state.allStations.filter(s => 
+        s.name.toLowerCase().includes(query) || 
+        (s.country && s.country.toLowerCase().includes(query)) ||
+        (s.city && s.city.toLowerCase().includes(query)) ||
+        (s.tags && s.tags.toLowerCase().includes(query))
+      ).slice(0, 10);
+
+      const renderMatches = (data) => {
+        if (data.length === 0) {
+          resultsContainer.innerHTML = '<div class="search-placeholder"><p>No stations found for "' + escapeHtml(query) + '"</p></div>';
+          return;
+        }
+        resultsContainer.innerHTML = data.map(s => {
+          const isActive = state.currentStation && state.currentStation.id === s.id;
+          return `
+            <div class="search-result-item ${isActive ? 'active' : ''}" data-station-id="${escapeHtml(s.id)}">
+              <div class="sr-info"><strong>${escapeHtml(s.name)}</strong><span>${escapeHtml(s.city || s.country || '')}</span></div>
+              <button class="sr-play-btn">${(isActive && state.isPlaying) ? 'Pause' : 'Play'}</button>
+            </div>
+          `;
+        }).join('');
+
+        resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+          item.onclick = () => {
+            const id = item.dataset.stationId;
+            let st = state.allStations.find(s => s.id === id) || data.find(s => s.id === id);
+            if (st) {
+              playStation(st);
+              document.getElementById('search-overlay').classList.remove('active');
+              document.body.style.overflow = '';
+              const m = document.getElementById('map');
+              if (m) { m.scrollIntoView({ behavior: 'smooth' }); if (state.map && st.lat) state.map.setView([st.lat, st.lng], 8); }
+            }
+          };
+        });
+      };
+
+      if (matches.length > 0) renderMatches(matches);
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`${API_SERVERS[0]}/json/stations/search?name=${encodeURIComponent(query)}&limit=15`);
+          if (res.ok) {
+            const raw = await res.json();
+            const apiM = raw.map(i => ({ id: i.stationuuid, name: i.name, url: i.url_resolved, favicon: i.favicon, tags: i.tags, lat: i.geo_lat ? Number(i.geo_lat) : null, lng: i.geo_long ? Number(i.geo_long) : null, country: i.country, city: i.state })).filter(s => s.url && s.name);
+            const finalM = [...matches, ...apiM.filter(m => !matches.find(ex => ex.id === m.id))].slice(0, 15);
+            renderMatches(finalM);
+          }
+        } catch (err) {}
+      }, 500);
+    };
+  }
+
+  // Grid Navigation
+  const nextStBtn = document.querySelector('.btn-next-st');
+  if (nextStBtn) nextStBtn.onclick = () => document.querySelector('.stations-grid')?.scrollBy({ left: 320, behavior: 'smooth' });
+
+  // Volume
+  const volumeSlider = document.getElementById('pb-volume-slider');
+  if (volumeSlider) {
+    volumeSlider.value = state.volume;
+    volumeSlider.oninput = (e) => {
+      state.volume = parseFloat(e.target.value);
+      state.audio.volume = state.volume;
+      if (state.volume > 0) state.lastVolume = state.volume;
+      updateVolumeIcon(state.volume);
+    };
+  }
+  const volumeBtn = document.getElementById('pb-volume-btn');
+  if (volumeBtn) volumeBtn.onclick = () => {
+    state.volume = state.volume > 0 ? 0 : (state.lastVolume || 0.8);
+    state.audio.volume = state.volume;
+    if (volumeSlider) volumeSlider.value = state.volume;
+    updateVolumeIcon(state.volume);
+  };
+
+  // EQ
+  const eqBtn = document.getElementById('pb-eq-btn');
+  const eqDropdown = document.getElementById('eq-dropdown');
+  if (eqBtn && eqDropdown) {
+    eqBtn.onclick = (e) => { e.stopPropagation(); eqDropdown.classList.toggle('show'); eqBtn.classList.toggle('active'); };
+    document.querySelectorAll('.eq-option').forEach(opt => {
+      opt.onclick = (e) => {
+        e.stopPropagation();
+        const style = opt.dataset.style;
+        document.querySelectorAll('.eq-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        applyAudioStyle(style);
+        eqDropdown.classList.remove('show');
+        eqBtn.classList.remove('active');
+      };
+    });
+  }
+
+  // Map Controls
+  document.querySelector('#zoom-in')?.addEventListener('click', () => state.map?.zoomIn());
+  document.querySelector('#zoom-out')?.addEventListener('click', () => state.map?.zoomOut());
+  document.querySelector('#locate-me')?.addEventListener('click', () => state.map?.locate({ setView: true, maxZoom: 10 }));
+
+  // Browse Page
+  document.getElementById('station-search')?.addEventListener('input', applyFilters);
+  document.querySelectorAll('#continent-filters .chip').forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll('#continent-filters .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.currentContinent = chip.dataset.continent;
+      applyFilters();
+    };
+  });
+  const loadMoreBtn = document.getElementById('btn-load-more');
+  if (loadMoreBtn) loadMoreBtn.onclick = () => { state.visibleStationsCount += 40; renderAllStations(); };
+
+  // Brand logo
+  document.querySelectorAll('.landing-nav-brand').forEach(brand => {
+    brand.onclick = (e) => { e.preventDefault(); navigateTo('/'); };
+  });
+
+  // Mobile Menu
+  const mobileToggle = document.getElementById('mobile-menu-toggle');
+  if (mobileToggle) mobileToggle.onclick = () => {
+    document.getElementById('mobile-nav-overlay')?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+  const closeMenuBtn = document.getElementById('close-menu-btn');
+  if (closeMenuBtn) closeMenuBtn.onclick = () => {
+    document.getElementById('mobile-nav-overlay')?.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  document.querySelectorAll('.mobile-nav-content a').forEach(link => {
+    link.onclick = () => {
+      document.getElementById('mobile-nav-overlay')?.classList.remove('open');
+      document.body.style.overflow = '';
+    };
   });
 }
 
-function renderSkeletons() {
-  refs.stationList.innerHTML = Array.from({ length: 8 }).map(() => `
-    <article class="station-item skeleton" style="padding: 16px; border: 1px solid var(--line); border-radius: 12px;">
-      <div class="skeleton-text" style="width: 60%;"></div>
-      <div class="skeleton-text" style="width: 40%; margin-top: 12px;"></div>
-      <div class="skeleton-text" style="width: 80%; margin-top: 8px;"></div>
-    </article>
-  `).join('');
-
-  refs.featuredList.innerHTML = Array.from({ length: 4 }).map(() => `
-    <article class="featured-item skeleton" style="height: 90px; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: center;">
-      <div class="skeleton-text" style="width: 50%;"></div>
-      <div class="skeleton-text" style="width: 70%; margin-top: 8px;"></div>
-    </article>
-  `).join('');
+function updateVolumeIcon(vol) {
+  const volumeIcon = document.getElementById('volume-icon');
+  if (!volumeIcon) return;
+  if (vol === 0) {
+    volumeIcon.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+  } else if (vol < 0.5) {
+    volumeIcon.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+  } else {
+    volumeIcon.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>';
+  }
 }
 
-async function boot() {
-  initializeMap();
-  bindEvents();
-  if (refs.orbitalConsole) {
-    initGlobe(refs.orbitalConsole);
+
+function applyFilters() {
+  const query = document.getElementById('station-search')?.value.toLowerCase() || '';
+  
+  state.filteredStations = state.allStations.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(query) || 
+                          (s.country && s.country.toLowerCase().includes(query)) ||
+                          (s.city && s.city.toLowerCase().includes(query)) ||
+                          (s.tags && s.tags.toLowerCase().includes(query));
+    
+    if (state.currentContinent === 'all') return matchesSearch;
+    
+    const continent = countryToContinent[s.country] || 'Other';
+    return matchesSearch && continent === state.currentContinent;
+  });
+
+  state.visibleStationsCount = 40;
+  renderAllStations();
+
+  // Hide loading overlay once filtered/data is ready
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 400);
   }
-  state.spatialAudioMode = readSpatialAudioPreference();
-  state.uiSoundsEnabled = readUiSoundPreference();
-  state.uiSoundProfile = readUiSoundProfilePreference();
-  syncSpatialAudioToggle();
-  syncUiSoundToggle();
-  syncUiSoundProfileToggle();
-  syncMapPanelToggle();
-  syncMapOverlayState();
-  setMapPanelView('map', { quiet: true });
+}
 
-  setMode('preview', 'Exploring a curated preview while the live directory loads.');
-
-  const cachedEntry = readCachedLiveStations();
-  const hasLiveCache = Boolean(cachedEntry?.stations?.length);
-
-  const hasDeepLinkSelection = applyHashSelection(window.location.hash);
-  if (!hasDeepLinkSelection) {
-    if (!hasLiveCache) {
-      renderSkeletons();
-    } else {
-      renderAll();
-      jumpToRegion('world');
-    }
+function updateStationCount(total, showing) {
+  const counter = document.getElementById('station-count');
+  if (counter) {
+    counter.textContent = `Showing ${showing.toLocaleString()} of ${total.toLocaleString()} stations`;
   }
+}
 
-  window.setTimeout(() => map?.invalidateSize(), 120);
+function renderAllStations() {
+  const grid = document.getElementById('all-stations-grid');
+  if (!grid) return;
 
-  if (hasLiveCache) {
-    applyLiveDirectory(
-      cachedEntry.stations,
-      `Loaded ${cachedEntry.stations.length.toLocaleString()} stations from your 24-hour cache.`,
-      cachedEntry.cachedAt
-    );
-  }
-
-  const shouldRefresh = !hasLiveCache || shouldRefreshLiveCache(cachedEntry);
-  if (!shouldRefresh) {
+  // If grid still holds skeletons, fade them out before painting real cards
+  if (grid.querySelector('.skeleton-card')) {
+    grid.style.opacity = '0';
+    grid.style.transition = 'opacity 0.25s ease';
+    requestAnimationFrame(() => {
+      _doRenderAllStations(grid);
+      grid.style.opacity = '1';
+    });
     return;
   }
+  _doRenderAllStations(grid);
+}
 
-  try {
-    const liveStations = await getLiveStationsWithRetry();
-    if (liveStations.length) {
-      const cachedAt = writeCachedLiveStations(liveStations);
-      applyLiveDirectory(
-        liveStations,
-        hasLiveCache
-          ? `24-hour cache refreshed in the background with ${liveStations.length.toLocaleString()} live stations.`
-          : `Live directory loaded with ${liveStations.length.toLocaleString()} stations.`,
-        cachedAt
-      );
-      if (!hasDeepLinkSelection && !hasLiveCache) {
-        jumpToRegion('world');
+function _doRenderAllStations(grid) {
+  const isFiltered = state.currentContinent !== 'all' || document.getElementById('station-search')?.value;
+  const stations = (state.filteredStations.length > 0 || isFiltered)
+    ? state.filteredStations 
+    : state.allStations;
+
+  const toRender = stations.slice(0, state.visibleStationsCount);
+  
+  // Update station count
+  updateStationCount(stations.length, toRender.length);
+
+  // Show/hide load more button
+  const loadMoreBtn = document.getElementById('btn-load-more');
+  if (loadMoreBtn) {
+    loadMoreBtn.style.display = toRender.length < stations.length ? '' : 'none';
+    loadMoreBtn.textContent = `Load More Stations (${(stations.length - toRender.length).toLocaleString()} remaining)`;
+  }
+
+  if (stations.length === 0 && isFiltered) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#9ca3af;"><p style="font-size:16px;">No stations found. Try a different search or filter.</p></div>';
+    return;
+  }
+  
+  grid.innerHTML = toRender.map(s => {
+    const isActive = state.currentStation && (state.currentStation.id === s.id || state.currentStation.name === s.name);
+    const name = String(s.name || '');
+    const cityOrCountry = s.city || s.country || '';
+    const primaryTag = s.tags ? String(s.tags).split(',')[0] : 'Live Stream';
+    const stationInitial = name.charAt(0).toUpperCase();
+    const logoContent = s.favicon
+      ? `<img src="${escapeHtml(s.favicon)}" alt="${escapeHtml(name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"><span style="display:none; font-size:24px; font-weight:800;">${escapeHtml(stationInitial)}</span>`
+      : `<span style="font-size:24px; font-weight:800;">${escapeHtml(stationInitial)}</span>`;
+    
+    return `
+      <div class="station-card list-card ${isActive ? 'active' : ''}" data-station-id="${escapeHtml(s.id)}" data-station-name="${escapeHtml(name)}">
+        <div class="st-logo" style="background: ${getRandomColor()}; color: #fff;">
+          ${logoContent}
+        </div>
+        <div class="st-info">
+          <h4>${escapeHtml(name.split(' ').slice(0,4).join(' '))}</h4>
+          <span class="st-loc">${escapeHtml(cityOrCountry)}</span>
+          <span class="st-genre">${escapeHtml(primaryTag)}</span>
+        </div>
+        <div class="st-actions">
+          <button class="st-play-small">
+            ${isActive ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Add listener for cards in grid
+  grid.querySelectorAll('.station-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.stationId;
+      const station = state.allStations.find(s => s.id === id);
+      if (station) playStation(station);
+    });
+  });
+}
+
+function getRandomColor() {
+  const colors = ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6', '#f59e0b', '#06b6d4'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+async function fetchLiveStations() {
+  if (state.loadingStations) return;
+  state.loadingStations = true;
+
+  // Normalize raw API item to our format
+  function normalize(item) {
+    let lat = item.geo_lat ? Number(item.geo_lat) : null;
+    let lng = item.geo_long ? Number(item.geo_long) : null;
+
+    // Fallback to country centroid if missing exact coordinates
+    if (lat === null || lng === null) {
+      const centroid = countryCentroids[item.country];
+      if (centroid) {
+        lat = centroid[0];
+        lng = centroid[1];
       }
-    } else {
-      if (!hasLiveCache) {
-        setMode('preview', 'Live lookup failed, so the curated preview stays active.');
-        renderAll();
-        if (!hasDeepLinkSelection) jumpToRegion('world');
+    }
+
+    return {
+      id: item.stationuuid,
+      name: item.name,
+      url: item.url_resolved,
+      favicon: item.favicon,
+      tags: item.tags,
+      lat: lat,
+      lng: lng,
+      country: item.country,
+      city: item.state
+    };
+  }
+
+    // Try IndexedDB cache first
+    try {
+      const cached = await loadFromIDB();
+      // Force refresh if cache has less than 50k stations (user likely has old 11k cache)
+      if (cached && cached.length > 50000) {
+        console.log(`✅ Loaded ${cached.length.toLocaleString()} stations from cache`);
+        state.allStations = cached;
+        updateMapMarkers(cached);
+        applyFilters();
+        // Removed the toast here to make it silent on page change
+        
+        // Refresh in background if needed (silent)
+        refreshInBackground();
+        state.loadingStations = false;
+        return;
+      }
+    } catch (e) {
+      console.warn('IDB cache miss', e);
+    }
+  
+    // Only show toast if we are actually starting a network fetch
+    showToast('Loading more radio stations...', true);
+  
+  for (const server of API_SERVERS) {
+    try {
+      const allData = [];
+      const PAGE_SIZE = 25000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const url = `${server}/json/stations/search?order=votes&reverse=true&limit=${PAGE_SIZE}&offset=${offset}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), LIVE_FETCH_TIMEOUT_MS);
+        
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const page = await response.json();
+        
+        allData.push(...page);
+        
+        if (page.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          offset += PAGE_SIZE;
+          showToast(`Loading more radio stations... (${allData.length.toLocaleString()} so far)`, true);
+        }
+      }
+
+      if (allData.length < 100) continue; // Too few, try next server
+
+      const normalized = allData
+        .map(normalize)
+        .filter(s => s.url && s.name);
+
+      console.log(`✅ Fetched ${normalized.length.toLocaleString()} stations from ${server}`);
+      
+      state.allStations = normalized;
+      updateMapMarkers(normalized);
+      applyFilters();
+      showToast(`${normalized.length.toLocaleString()} radio stations loaded!`);
+      
+      // Persist to IDB
+      saveToIDB(normalized);
+      state.loadingStations = false;
+      return;
+
+    } catch (e) {
+      console.warn(`Server ${server} failed:`, e.message);
+    }
+  }
+
+  // All servers failed — use fallback
+  console.warn('All API servers failed, using fallback stations');
+  showToast('Using curated stations (API unavailable)');
+  state.loadingStations = false;
+}
+
+// --- IndexedDB helpers for caching all stations ---
+const IDB_NAME = 'WorldRadioAtlasDB';
+const IDB_VERSION = 1;
+const IDB_STORE = 'stationCache';
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve(req.result);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+      }
+    };
+  });
+}
+
+async function loadFromIDB() {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get('all');
+    req.onsuccess = () => {
+      const row = req.result;
+      if (row && (Date.now() - row.ts < LIVE_CACHE_DURATION_MS)) {
+        resolve(row.data);
       } else {
-        setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
+        resolve(null);
       }
-    }
-  } catch (error) {
-    if (!hasLiveCache) {
-      setMode('preview', 'Live lookup failed, so the curated preview stays active.');
-      renderAll();
-      if (!hasDeepLinkSelection) jumpToRegion('world');
-    } else {
-      setStatus('Could not refresh live data in the background. Using your cached stations.', 'live');
-    }
+    };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function saveToIDB(stations) {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put({ key: 'all', data: stations, ts: Date.now() });
+  } catch (e) {
+    console.warn('IDB save failed', e);
   }
 }
 
-boot();
+async function refreshInBackground() {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get('all');
+    req.onsuccess = async () => {
+      const row = req.result;
+      if (!row || (Date.now() - row.ts > LIVE_CACHE_DURATION_MS)) {
+        console.log('Background refresh: cache expired, will refresh on next load');
+      }
+    };
+  } catch (e) { /* ignore */ }
+}
+
+
+
+setTimeout(() => {
+  initializeMap();
+  initGlobalListeners();
+  bindEvents();
+
+  if (isBrowsePage) {
+    renderSkeletons(40);
+    fetchLiveStations();
+  } else if (isVideoPage) {
+    initVideoPage();
+    fetchLiveStations();
+  } else {
+    // Only fetch if not already loaded
+    if (state.allStations.length < 500) {
+      setTimeout(() => fetchLiveStations(), 2000);
+    }
+  }
+
+  // Restore state if available
+  const savedStation = localStorage.getItem('world-radio-atlas.current-station');
+  if (savedStation) {
+    try {
+      const station = JSON.parse(savedStation);
+      updatePlayerBar(station);
+      state.currentStation = station;
+      updateCityVideo(station);
+      
+      // Initialize audio source but stay paused
+      state.audio.src = station.url;
+      state.audio.preload = 'none'; // Don't waste data until user clicks play
+      state.audio.pause();
+      state.isPlaying = false;
+      
+      const btn = document.getElementById('pb-play-pause');
+      if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+    } catch (e) {
+      console.error('Failed to restore station:', e);
+    }
+  }
+}, 0);
+
+
+setupServiceWorker();
+
+async function navigateTo(url, push = true) {
+  try {
+    const response = await fetch(url);
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    const newContent = doc.querySelector('.landing-content');
+    const currentContent = document.querySelector('.landing-content');
+    
+    if (!newContent || !currentContent) {
+      window.location.href = url;
+      return;
+    }
+
+    // Update URL and Title
+    if (push) window.history.pushState({}, '', url);
+    document.title = doc.title;
+
+    // Smooth Transition
+    currentContent.style.opacity = '0';
+    currentContent.style.transition = 'opacity 0.15s ease';
+
+    await new Promise(resolve => setTimeout(() => {
+      // Replace Content
+      currentContent.innerHTML = newContent.innerHTML;
+      
+      // Update State
+      isBrowsePage = window.location.pathname.includes('browse.html');
+      isVideoPage = window.location.pathname.includes('videos.html');
+
+      // Update Nav Active States
+      document.querySelectorAll('.landing-nav-links a, .mobile-nav-content a').forEach(navLink => {
+        const linkHref = navLink.getAttribute('href');
+        const isActive = (linkHref === '/' && (window.location.pathname === '/' || window.location.pathname === '/index.html')) || 
+                         (linkHref !== '/' && linkHref && window.location.pathname.includes(linkHref));
+        navLink.classList.toggle('active', isActive);
+      });
+
+      // Fade in
+      currentContent.style.opacity = '1';
+
+      // Re-initialize logic
+      if (isBrowsePage) {
+        renderSkeletons(40);
+        // Only fetch if we don't have enough stations
+        if (state.allStations.length < 500) {
+          fetchLiveStations();
+        } else {
+          applyFilters();
+        }
+      } else if (isVideoPage) {
+        initVideoPage();
+      } else {
+        initializeMap();
+      }
+
+      // Re-bind events for new content
+      bindEvents();
+      
+      // Scroll to top
+      window.scrollTo(0, 0);
+
+      resolve();
+    }, 150));
+
+  } catch (err) {
+    console.error('Navigation failed:', err);
+    window.location.href = url;
+  }
+}

@@ -1,16 +1,18 @@
 # World Radio Atlas - Robots.txt
 # https://worldradioatlas.netlify.app/
 
-# Allow all search engine bots to crawl the site
+# -------------------------------------------------------
+# Default: Allow all well-behaved bots
+# -------------------------------------------------------
 User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
-
-# Crawl-delay for polite bots (optional, most major bots ignore this)
 Crawl-delay: 1
 
-# Google Bot - Full access
+# -------------------------------------------------------
+# Search Engines - Full crawl access
+# -------------------------------------------------------
 User-agent: Googlebot
 Allow: /
 Crawl-delay: 0
@@ -21,7 +23,6 @@ Allow: /
 User-agent: Googlebot-News
 Allow: /
 
-# Bing Bot - Full access
 User-agent: Bingbot
 Allow: /
 Crawl-delay: 0
@@ -29,7 +30,6 @@ Crawl-delay: 0
 User-agent: MSNBot
 Allow: /
 
-# Yahoo/DuckDuckGo/Others
 User-agent: Slurp
 Allow: /
 
@@ -42,7 +42,9 @@ Allow: /
 User-agent: YandexBot
 Allow: /
 
-# Social Media Bots - Allow for rich previews
+# -------------------------------------------------------
+# Social / Rich Preview Bots - Allow for OG cards
+# -------------------------------------------------------
 User-agent: facebookexternalhit
 Allow: /
 
@@ -64,13 +66,59 @@ Allow: /
 User-agent: Discordbot
 Allow: /
 
-# Block known bad/aggressive bots
+# -------------------------------------------------------
+# AI / LLM Crawlers - ALLOWED for AIO & GEO visibility
+# Generative Engine Optimization (GEO) requires AI bots
+# to be able to read the site so it can be cited in AI answers.
+# -------------------------------------------------------
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Gemini
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# -------------------------------------------------------
+# SEO Audit / Research Bots - Selectively allowed
+# -------------------------------------------------------
 User-agent: AhrefsBot
-Disallow: /
+Allow: /
 
 User-agent: SemrushBot
-Disallow: /
+Allow: /
 
+# -------------------------------------------------------
+# Aggressive / Low-quality scrapers - Block
+# -------------------------------------------------------
 User-agent: MJ12bot
 Disallow: /
 
@@ -89,23 +137,9 @@ Disallow: /
 User-agent: AspiegelBot
 Disallow: /
 
-# AI Training Bots - Block (optional)
-User-agent: GPTBot
-Disallow: /
-
-User-agent: ChatGPT-User
-Disallow: /
-
-User-agent: CCBot
-Disallow: /
-
-User-agent: anthropic-ai
-Disallow: /
-
-User-agent: ClaudeBot
-Disallow: /
-
-# Sitemap locations
+# -------------------------------------------------------
+# Sitemaps
+# -------------------------------------------------------
 Sitemap: https://worldradioatlas.netlify.app/sitemap.xml
 
 # Host directive (for Yandex)

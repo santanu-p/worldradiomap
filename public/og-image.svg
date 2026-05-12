@@ -1,63 +1,286 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">World Radio Atlas</title>
-  <desc id="desc">A social preview image showing a map pin, radio waves, and the World Radio Atlas branding.</desc>
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+
   <defs>
-    <linearGradient id="bg" x1="80" y1="40" x2="1120" y2="590" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0b1730"/>
-      <stop offset="0.52" stop-color="#10264c"/>
-      <stop offset="1" stop-color="#08111f"/>
+
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#020817"/>
+      <stop offset="50%" stop-color="#061B44"/>
+      <stop offset="100%" stop-color="#020617"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(840 180) rotate(130) scale(320 260)" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#27c2c1" stop-opacity="0.58"/>
-      <stop offset="1" stop-color="#27c2c1" stop-opacity="0"/>
+
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+
+    <radialGradient id="earth" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#49B6FF"/>
+      <stop offset="100%" stop-color="#003CCB"/>
     </radialGradient>
-    <linearGradient id="pin" x1="250" y1="130" x2="470" y2="470" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffeb9a"/>
-      <stop offset="0.45" stop-color="#ffbb64"/>
-      <stop offset="1" stop-color="#ff6a57"/>
+
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#111C3A"/>
     </linearGradient>
-    <linearGradient id="panel" x1="650" y1="170" x2="1040" y2="430" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#11284b" stop-opacity="0.95"/>
-      <stop offset="1" stop-color="#0d1c34" stop-opacity="0.95"/>
-    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+
+    <clipPath id="globeClip">
+      <circle cx="0" cy="0" r="180"/>
+    </clipPath>
+
   </defs>
 
-  <rect width="1200" height="630" rx="56" fill="url(#bg)"/>
-  <circle cx="900" cy="180" r="240" fill="url(#glow)"/>
+  <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <g opacity="0.22" stroke="#7ce7ea" stroke-width="2">
-    <path d="M120 480H1080"/>
-    <path d="M150 410H1050"/>
-    <path d="M180 340H1020"/>
-    <path d="M210 270H990"/>
-    <path d="M240 200H960"/>
-    <path d="M280 120V520"/>
-    <path d="M400 120V520"/>
-    <path d="M520 120V520"/>
-    <path d="M640 120V520"/>
-    <path d="M760 120V520"/>
-    <path d="M880 120V520"/>
+  <g opacity="0.8">
+
+    <circle cx="120" cy="80" r="2" fill="white">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="4s" repeatCount="indefinite"/>
+    </circle>
+
+    <circle cx="330" cy="120" r="1.5" fill="white">
+      <animate attributeName="opacity" values="1;0.3;1" dur="6s" repeatCount="indefinite"/>
+    </circle>
+
+    <circle cx="700" cy="90" r="2" fill="white">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="5s" repeatCount="indefinite"/>
+    </circle>
+
+    <circle cx="1020" cy="130" r="2" fill="white">
+      <animate attributeName="opacity" values="1;0.2;1" dur="7s" repeatCount="indefinite"/>
+    </circle>
+
+    <circle cx="1130" cy="300" r="1.5" fill="white">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="5s" repeatCount="indefinite"/>
+    </circle>
+
   </g>
 
-  <rect x="660" y="134" width="408" height="360" rx="36" fill="url(#panel)" stroke="#69dfe7" stroke-opacity="0.22"/>
-  <text x="706" y="236" fill="#f7fbff" font-family="Inter, Manrope, Arial, sans-serif" font-size="58" font-weight="800">World Radio Atlas</text>
-  <text x="706" y="292" fill="#b9d7f0" font-family="Inter, Manrope, Arial, sans-serif" font-size="30" font-weight="600">Live radio stations on a global map</text>
-  <text x="706" y="344" fill="#8ddfe3" font-family="Inter, Manrope, Arial, sans-serif" font-size="22" font-weight="600">Curated picks · filters · instant playback</text>
+  <g transform="translate(820 315)">
 
-  <g transform="translate(228 112)">
-    <path d="M252 0C170 0 104 66 104 148c0 94 82 165 136 208 7 6 17 6 24 0 54-43 136-114 136-208C400 66 334 0 252 0Z" fill="url(#pin)"/>
-    <circle cx="252" cy="148" r="82" fill="#0d1c34"/>
-    <path d="M252 110v44" stroke="#9ef8ff" stroke-width="16" stroke-linecap="round"/>
-    <circle cx="252" cy="172" r="14" fill="#9ef8ff"/>
-    <path d="M212 146c12-20 28-30 40-30s28 10 40 30" fill="none" stroke="#9ef8ff" stroke-width="10" stroke-linecap="round"/>
-    <path d="M190 154c18-32 42-48 62-48s44 16 62 48" fill="none" stroke="#5edce9" stroke-width="9" stroke-linecap="round"/>
-    <path d="M152 76c18 18 32 40 42 66" fill="none" stroke="#fff3cf" stroke-width="12" stroke-linecap="round" opacity="0.28"/>
+    <circle
+      cx="0"
+      cy="0"
+      r="180"
+      fill="url(#earth)"
+      filter="url(#shadow)"
+    />
+
+    <g opacity="0.18">
+      <ellipse cx="0" cy="0" rx="180" ry="70" stroke="white" stroke-width="2"/>
+      <ellipse cx="0" cy="0" rx="180" ry="120" stroke="white" stroke-width="2"/>
+      <ellipse cx="0" cy="0" rx="180" ry="170" stroke="white" stroke-width="2"/>
+
+      <ellipse cx="0" cy="0" rx="70" ry="180" stroke="white" stroke-width="2"/>
+      <ellipse cx="0" cy="0" rx="120" ry="180" stroke="white" stroke-width="2"/>
+    </g>
+
+    <g clip-path="url(#globeClip)">
+
+      <g>
+        <animateTransform
+          attributeName="transform"
+          type="translate"
+          from="0 0"
+          to="-260 0"
+          dur="18s"
+          repeatCount="indefinite"
+        />
+
+        <g fill="#021B5B" opacity="0.85">
+
+          <path d="M-90 -110 L-20 -130 L40 -90 L20 -20 L-40 10 L-100 -30 Z"/>
+          <path d="M80 -90 L150 -60 L170 10 L120 70 L60 40 L40 -20 Z"/>
+          <path d="M10 60 L60 110 L30 180 L-30 140 L-50 80 Z"/>
+
+        </g>
+
+        <g transform="translate(260 0)" fill="#021B5B" opacity="0.85">
+
+          <path d="M-90 -110 L-20 -130 L40 -90 L20 -20 L-40 10 L-100 -30 Z"/>
+          <path d="M80 -90 L150 -60 L170 10 L120 70 L60 40 L40 -20 Z"/>
+          <path d="M10 60 L60 110 L30 180 L-30 140 L-50 80 Z"/>
+
+        </g>
+
+      </g>
+
+    </g>
+
+    <g filter="url(#glow)">
+
+      <circle
+        cx="0"
+        cy="0"
+        r="220"
+        stroke="#38BDF8"
+        stroke-width="3"
+        fill="none"
+        opacity="0.4"
+      >
+        <animate attributeName="r" values="210;235;210" dur="4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.2;0.7;0.2" dur="4s" repeatCount="indefinite"/>
+      </circle>
+
+      <circle
+        cx="0"
+        cy="0"
+        r="250"
+        stroke="#2563EB"
+        stroke-width="2"
+        fill="none"
+        opacity="0.2"
+      >
+        <animate attributeName="r" values="240;270;240" dur="5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.1;0.5;0.1" dur="5s" repeatCount="indefinite"/>
+      </circle>
+
+    </g>
+
+    <g filter="url(#glow)">
+
+      <circle cx="-90" cy="-70" r="7" fill="#38BDF8">
+        <animate attributeName="r" values="5;9;5" dur="2s" repeatCount="indefinite"/>
+      </circle>
+
+      <circle cx="110" cy="-20" r="7" fill="#60A5FA">
+        <animate attributeName="r" values="5;10;5" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+
+      <circle cx="40" cy="120" r="7" fill="#93C5FD">
+        <animate attributeName="r" values="5;8;5" dur="3s" repeatCount="indefinite"/>
+      </circle>
+
+      <line x1="-90" y1="-70" x2="110" y2="-20" stroke="#38BDF8" stroke-width="2"/>
+      <line x1="110" y1="-20" x2="40" y2="120" stroke="#38BDF8" stroke-width="2"/>
+
+    </g>
+
   </g>
 
-  <g opacity="0.95" transform="translate(708 396)">
-    <rect width="60" height="14" rx="7" fill="#7ce7ea"/>
-    <rect x="72" y="-18" width="60" height="32" rx="7" fill="#ffb45a"/>
-    <rect x="144" y="-42" width="60" height="56" rx="7" fill="#ff6a57"/>
-    <rect x="216" y="-12" width="60" height="26" rx="7" fill="#7ce7ea"/>
+  <g transform="translate(80 100)">
+
+    <g transform="translate(0 0)">
+      <circle cx="45" cy="45" r="45" fill="#071126"/>
+
+      <circle
+        cx="45"
+        cy="45"
+        r="35"
+        stroke="url(#blue)"
+        stroke-width="4"
+        fill="none"
+      />
+
+      <circle
+        cx="45"
+        cy="45"
+        r="26"
+        fill="url(#earth)"
+      />
+
+      <path
+        d="M25 38 A20 20 0 0 1 65 38"
+        stroke="#38BDF8"
+        stroke-width="4"
+        stroke-linecap="round"
+        fill="none"
+      >
+        <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+      </path>
+
+      <line x1="45" y1="28" x2="35" y2="60" stroke="white" stroke-width="4"/>
+      <line x1="45" y1="28" x2="55" y2="60" stroke="white" stroke-width="4"/>
+      <circle cx="45" cy="24" r="4" fill="white"/>
+    </g>
+
+    <text
+      x="110"
+      y="58"
+      fill="white"
+      font-size="42"
+      font-family="Inter, Arial, sans-serif"
+      font-weight="700"
+    >
+      World Radio Atlas
+    </text>
+
+    <text
+      x="0"
+      y="180"
+      fill="white"
+      font-size="72"
+      font-family="Inter, Arial, sans-serif"
+      font-weight="800"
+    >
+      Explore The
+    </text>
+
+    <text
+      x="0"
+      y="260"
+      fill="url(#blue)"
+      font-size="72"
+      font-family="Inter, Arial, sans-serif"
+      font-weight="800"
+    >
+      Sound Of The World
+    </text>
+
+    <text
+      x="0"
+      y="330"
+      fill="#CBD5E1"
+      font-size="28"
+      font-family="Inter, Arial, sans-serif"
+    >
+      Listen to thousands of FM &amp; radio stations
+    </text>
+
+    <text
+      x="0"
+      y="370"
+      fill="#CBD5E1"
+      font-size="28"
+      font-family="Inter, Arial, sans-serif"
+    >
+      with interactive maps, live audio &amp; city videos.
+    </text>
+
+    <g transform="translate(0 430)">
+      <rect
+        width="260"
+        height="72"
+        rx="18"
+        fill="url(#blue)"
+        filter="url(#shadow)"
+      >
+        <animate attributeName="opacity" values="0.85;1;0.85" dur="3s" repeatCount="indefinite"/>
+      </rect>
+
+      <text
+        x="38"
+        y="46"
+        fill="white"
+        font-size="30"
+        font-family="Inter, Arial, sans-serif"
+        font-weight="700"
+      >
+        ▶ Listen Live
+      </text>
+    </g>
+
   </g>
+
 </svg>

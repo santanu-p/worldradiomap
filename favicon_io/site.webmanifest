@@ -1,15 +1,16 @@
 {
 	"name": "World Radio Atlas",
-	"short_name": "Atlas",
+	"short_name": "Radio Atlas",
 	"description": "Discover and listen to live radio stations from around the world on an interactive map.",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",
-	"background_color": "#050816",
-	"theme_color": "#08111f",
+	"background_color": "#05070a",
+	"theme_color": "#05070b",
 	"orientation": "any",
 	"lang": "en",
 	"dir": "ltr",
+	"categories": ["music", "entertainment", "news"],
 	"icons": [
 		{
 			"src": "/favicon.svg",

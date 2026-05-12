@@ -1,32 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">World Radio Atlas Favicon</title>
-  <desc id="desc">A map pin with radio waves on a deep blue atmospheric background.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <linearGradient id="bg" x1="48" y1="36" x2="460" y2="476" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#11233b"/>
-      <stop offset="1" stop-color="#0a1323"/>
-    </linearGradient>
-    <radialGradient id="ambient" cx="0" cy="0" r="1" gradientTransform="translate(334 164) rotate(128.6) scale(336 296)" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#27c2c1" stop-opacity="0.46"/>
-      <stop offset="1" stop-color="#27c2c1" stop-opacity="0"/>
+    <radialGradient id="oceanGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#145eff"/>
+      <stop offset="65%" stop-color="#0832a8"/>
+      <stop offset="100%" stop-color="#04144e"/>
     </radialGradient>
-    <linearGradient id="pin" x1="155" y1="92" x2="362" y2="430" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffd061"/>
-      <stop offset="0.52" stop-color="#ff9852"/>
-      <stop offset="1" stop-color="#ff5b4f"/>
-    </linearGradient>
   </defs>
 
-  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <circle cx="356" cy="144" r="194" fill="url(#ambient)"/>
+  <circle cx="256" cy="256" r="248" fill="#070d1a"/>
 
-  <path d="M256 82C174 82 108 148 108 230C108 324 190 395 244 438C251 444 261 444 268 438C322 395 404 324 404 230C404 148 338 82 256 82Z" fill="url(#pin)"/>
-  <circle cx="256" cy="230" r="84" fill="#0a1c31"/>
+  <path d="M 160 445 A 215 215 0 1 1 352 445" fill="none" stroke="#005df8" stroke-width="14" stroke-linecap="round"/>
 
-  <path d="M256 190V244" stroke="#97f6ff" stroke-width="16" stroke-linecap="round"/>
-  <circle cx="256" cy="262" r="14" fill="#97f6ff"/>
-  <path d="M218 228C229 211 242 203 256 203C270 203 283 211 294 228" stroke="#97f6ff" stroke-width="11" stroke-linecap="round" fill="none"/>
-  <path d="M198 237C214 213 234 198 256 198C278 198 298 213 314 237" stroke="#55d8ea" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="256" cy="235" r="170" fill="url(#oceanGlow)"/>
 
-  <path d="M176 173C190 137 219 113 255 106" stroke="#fff4d5" stroke-width="12" stroke-linecap="round" opacity="0.38"/>
+  <g fill="#021345">
+    <path d="M 175 90 C 185 85, 205 75, 220 80 C 215 95, 225 105, 235 100 C 245 95, 255 105, 260 115 C 240 120, 230 130, 220 125 C 210 145, 180 155, 170 170 C 160 185, 140 200, 150 215 C 160 230, 150 240, 140 250 C 125 245, 115 230, 110 220 C 100 215, 95 200, 105 185 C 115 170, 105 150, 115 130 C 125 110, 140 100, 150 115 C 160 130, 170 115, 175 90 Z"/>
+    <path d="M 230 75 C 240 70, 250 80, 245 90 C 235 95, 225 85, 230 75 Z"/>
+    
+    <path d="M 140 260 C 150 270, 165 265, 170 280 C 175 295, 190 300, 185 315 C 180 330, 195 350, 190 365 C 185 380, 175 390, 165 375 C 155 360, 145 340, 150 325 C 155 310, 140 295, 135 280 C 130 265, 135 255, 140 260 Z"/>
+    <path d="M 155 240 C 165 245, 160 255, 150 250 C 145 245, 150 235, 155 240 Z"/>
+
+    <path d="M 275 105 C 290 100, 310 95, 330 105 C 345 115, 370 110, 390 120 C 405 130, 420 145, 415 160 C 410 175, 400 165, 390 175 C 380 185, 370 175, 360 180 C 350 185, 335 170, 325 180 C 315 190, 305 180, 295 190 C 285 200, 275 190, 270 180 C 265 170, 255 160, 260 145 C 265 130, 255 120, 265 115 C 270 110, 270 105, 275 105 Z"/>
+    <path d="M 285 125 C 295 120, 300 130, 290 135 C 280 140, 275 130, 285 125 Z"/>
+
+    <path d="M 290 205 C 310 195, 330 200, 345 210 C 360 220, 375 215, 385 230 C 395 245, 380 255, 375 270 C 370 285, 360 300, 355 315 C 350 330, 355 345, 345 340 C 335 335, 330 315, 320 300 C 310 285, 295 275, 285 260 C 275 245, 270 225, 280 215 C 285 210, 285 205, 290 205 Z"/>
+    <path d="M 370 205 C 380 215, 395 220, 400 235 C 405 250, 395 265, 390 250 C 385 235, 375 225, 365 215 C 360 210, 365 200, 370 205 Z"/>
+    <path d="M 385 305 C 390 310, 385 320, 380 315 C 375 310, 380 300, 385 305 Z"/>
+  </g>
+
+  <path d="M 215 300 A 48 48 0 0 1 297 300" fill="none" stroke="#2583ff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 185 335 A 90 90 0 0 1 327 335" fill="none" stroke="#2583ff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 155 370 A 130 130 0 0 1 357 370" fill="none" stroke="#2583ff" stroke-width="10" stroke-linecap="round"/>
+
+  <circle cx="256" cy="270" r="14" fill="#ffffff"/>
+  
+  <path d="M 248 280 L 205 450 M 264 280 L 307 450" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  
+  <line x1="219" y1="395" x2="293" y2="395" stroke="#ffffff" stroke-width="8"/>
+  <line x1="233" y1="340" x2="279" y2="340" stroke="#ffffff" stroke-width="8"/>
+  
+  <path d="M 209 438 L 293 395 M 303 438 L 219 395" stroke="#ffffff" stroke-width="8"/>
+  <path d="M 219 395 L 279 340 M 293 395 L 233 340" stroke="#ffffff" stroke-width="8"/>
+  <path d="M 233 340 L 256 288 M 279 340 L 256 288" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
 </svg>

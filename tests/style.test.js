@@ -2,22 +2,22 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('video stage honors hidden attribute so the map remains interactive in map mode', async () => {
+test('video page hides the placeholder once a city video is active', async () => {
   const css = await readFile(new URL('../src/style.css', import.meta.url), 'utf8');
 
   assert.match(
     css,
-    /\.video-stage\[hidden\]\s*\{[\s\S]*?display:\s*none\s*;/,
-    'expected an explicit hidden-state rule for the video stage overlay'
+    /\.video-player-wrapper\.has-video\s+\.video-placeholder\s*\{[\s\S]*?opacity:\s*0\s*;[\s\S]*?pointer-events:\s*none\s*;/,
+    'expected an active video state to hide the placeholder'
   );
 });
 
-test('map overlay exposes a collapsed state that gets it out of the way', async () => {
+test('home map controls are layered above the map', async () => {
   const css = await readFile(new URL('../src/style.css', import.meta.url), 'utf8');
 
   assert.match(
     css,
-    /\.map-overlay\.is-collapsed\s*\{[\s\S]*?transform:\s*translateY\(/,
-    'expected a collapsed map-overlay treatment'
+    /\.map-controls-custom\s*\{[\s\S]*?z-index:\s*10\s*;/,
+    'expected custom map controls to be visible above the Leaflet layer'
   );
 });

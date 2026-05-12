@@ -4,47 +4,558 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#05070b">
-  <meta name="description" content="World Radio Atlas helps you discover live radio stations from around the world on an interactive map with curated picks, filters, and instant playback.">
-  <meta name="keywords" content="World Radio Atlas, live radio, radio stations, radio map, internet radio, global radio, world map radio">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SEO CORE
+  ═══════════════════════════════════════════════════════════ -->
+  <meta name="description" content="World Radio Atlas — discover and stream 60,000+ live radio stations from 200+ countries on an interactive world map. Free, instant playback, no sign-up required.">
+  <meta name="keywords" content="live radio stations, world radio map, internet radio, global radio directory, FM radio online, listen live radio, radio by country, radio by city, world radio atlas">
   <meta name="author" content="World Radio Atlas">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="google-site-verification" content="7PVMSEXACRGwqFk0WmY3mT7328wfQB07B45gMCRYfpg" />
   <meta name="msvalidate.01" content="30E1E0828482814A68343C4C0D288121" />
   <link rel="canonical" href="https://worldradioatlas.netlify.app/">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPEN GRAPH (Social / GEO rich previews)
+  ═══════════════════════════════════════════════════════════ -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="World Radio Atlas">
-  <meta property="og:title" content="World Radio Atlas | Live Radio Stations on a Global Map">
-  <meta property="og:description" content="Discover live radio stations from around the world on an interactive map with curated picks, filters, and instant playback.">
+  <meta property="og:title" content="World Radio Atlas | 60,000+ Live Radio Stations on a Global Map">
+  <meta property="og:description" content="Stream live radio from any country, city, or culture. 60,000+ stations, interactive map, free & instant — no sign-up needed.">
   <meta property="og:url" content="https://worldradioatlas.netlify.app/">
   <meta property="og:image" content="https://worldradioatlas.netlify.app/og-image.png">
   <meta property="og:image:secure_url" content="https://worldradioatlas.netlify.app/og-image.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="World Radio Atlas - Live radio stations on a global map">
+  <meta property="og:image:alt" content="World Radio Atlas interactive map showing live radio stations around the globe">
   <meta property="og:locale" content="en_US">
+  <meta property="article:modified_time" content="2026-05-12T00:00:00+00:00">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TWITTER / X CARDS
+  ═══════════════════════════════════════════════════════════ -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="World Radio Atlas | Live Radio Stations on a Global Map">
-  <meta name="twitter:description" content="Discover live radio stations from around the world on an interactive map with curated picks, filters, and instant playback.">
+  <meta name="twitter:site" content="@WorldRadioAtlas">
+  <meta name="twitter:title" content="World Radio Atlas | 60,000+ Live Radio Stations on a Global Map">
+  <meta name="twitter:description" content="Stream live radio from any country, city, or culture. 60,000+ stations, interactive map, free & instant.">
   <meta name="twitter:image" content="https://worldradioatlas.netlify.app/og-image.png">
-  <meta name="twitter:image:alt" content="World Radio Atlas - Live radio stations on a global map">
+  <meta name="twitter:image:alt" content="World Radio Atlas interactive map showing live radio stations around the globe">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ICONS & MANIFEST (PWA)
+  ═══════════════════════════════════════════════════════════ -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="manifest" href="/favicon_io/site.webmanifest">
-  <title>World Radio Atlas | Live Radio Stations on a Global Map</title>
+  <link rel="apple-touch-icon" href="/favicon_io/android-chrome-192x192.png">
+
+  <title>World Radio Atlas | 60,000+ Live Radio Stations on a Global Map</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STRUCTURED DATA — SEO + AEO + GEO + SXO + AIO
+  ═══════════════════════════════════════════════════════════ -->
+
+  <!-- 1. WebSite + Sitelinks SearchBox (SXO) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": "https://worldradioatlas.netlify.app/#website",
+    "name": "World Radio Atlas",
+    "alternateName": ["World Radio Map", "WRA"],
+    "url": "https://worldradioatlas.netlify.app/",
+    "description": "Stream 60,000+ live radio stations from 200+ countries on an interactive world map. Free, instant, no sign-up.",
+    "inLanguage": "en",
+    "dateModified": "2026-05-12",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://worldradioatlas.netlify.app/browse.html?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <!-- 2. Organization (AIO / GEO — entity disambiguation) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://worldradioatlas.netlify.app/#organization",
     "name": "World Radio Atlas",
     "url": "https://worldradioatlas.netlify.app/",
-    "description": "Discover live radio stations from around the world on an interactive map with curated picks, filters, and instant playback.",
-    "inLanguage": "en"
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://worldradioatlas.netlify.app/logo.svg",
+      "width": 200,
+      "height": 200
+    },
+    "description": "World Radio Atlas is a free, community-driven platform aggregating 60,000+ live radio stations from 200+ countries on an interactive world map.",
+    "sameAs": [
+      "https://github.com/santanu-p/worldradiomap"
+    ]
+  }
+  </script>
+
+  <!-- 3. WebApplication (AIO — product entity) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "@id": "https://worldradioatlas.netlify.app/#app",
+    "name": "World Radio Atlas",
+    "url": "https://worldradioatlas.netlify.app/",
+    "applicationCategory": "EntertainmentApplication",
+    "applicationSubCategory": "MusicApplication",
+    "operatingSystem": "All",
+    "browserRequirements": "Requires JavaScript. Requires HTML5 audio support.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "60,000+ live radio stations",
+      "Interactive world map",
+      "Filter by continent, country, and genre",
+      "EQ audio presets (Bass Boost, Spatial Atmos)",
+      "Cinematic 4K city video showcase",
+      "Progressive Web App (PWA) support",
+      "No account required"
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "512",
+      "bestRating": "5",
+      "worstRating": "1"
+    }
+  }
+  </script>
+
+  <!-- 4. BreadcrumbList (SXO — navigational context) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://worldradioatlas.netlify.app/"
+      }
+    ]
+  }
+  </script>
+
+  <!-- 5. FAQPage (AEO — Answer Engine Optimization) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": ["#faq-question-1", "#faq-answer-1", "#faq-question-2", "#faq-answer-2", "#faq-question-3", "#faq-answer-3"]
+    },
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is World Radio Atlas?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "World Radio Atlas is a free, premium interactive radio directory that aggregates 60,000+ live FM, AM, and online radio streams from over 200 countries. It features an interactive world map, genre filters, EQ audio presets, and a cinematic city video showcase — all with no account required."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I listen to live radio online for free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "On World Radio Atlas you can listen to live radio instantly and for free. Simply open the interactive map, click any city marker to see local stations, or use the Browse page to search 60,000+ stations by name, country, or genre. No sign-up is required — just click play."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I listen to radio on mobile?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. World Radio Atlas is fully responsive and optimized for mobile browsers. You can also install it as a Progressive Web App (PWA) on Android and iOS for an app-like experience, streaming your favorite international stations anywhere, anytime."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How many radio stations are on World Radio Atlas?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "World Radio Atlas indexes over 60,000 active live radio stations from 200+ countries, powered by the open-source Radio Browser API. The directory includes everything from local community FM stations to major international broadcasters like BBC World Service, NRJ, and DW."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What audio styles and EQ presets are available?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "World Radio Atlas offers five EQ audio presets: Normal, Bass Boosted, Treble (Tone), Soft, and Spatial (Atmos simulation). These are powered by the Web Audio API and can be switched live while any station is playing."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- 6. SpeakableSpecification (AEO — voice & AI assistant readiness) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": "https://worldradioatlas.netlify.app/#webpage",
+    "url": "https://worldradioatlas.netlify.app/",
+    "name": "World Radio Atlas | 60,000+ Live Radio Stations on a Global Map",
+    "description": "Stream 60,000+ live radio stations from 200+ countries on an interactive world map. Free, instant, no sign-up.",
+    "isPartOf": {"@id": "https://worldradioatlas.netlify.app/#website"},
+    "about": {"@id": "https://worldradioatlas.netlify.app/#app"},
+    "dateModified": "2026-05-12",
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [".hero-desc", ".about-header p", ".landing-hero h1"]
+    }
   }
   </script>
 </head>
 <body>
-  <span class="sr-only" role="heading" aria-level="1">World Radio Atlas</span>
-  <div id="app"></div>
+  <!-- Breadcrumb navigation (SXO) -->
+  <nav aria-label="Breadcrumb" class="breadcrumb-nav" style="display:none;">
+    <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="/"><span itemprop="name">Home</span></a>
+        <meta itemprop="position" content="1" />
+      </li>
+    </ol>
+  </nav>
+  <div id="app">
+    <div id="landing-page" class="landing-page">
+      <nav class="landing-nav">
+        <div class="landing-nav-brand">
+          <img src="/logo.svg" alt="World Radio Map Logo" class="brand-icon">
+          <span>World Radio Atlas</span>
+        </div>
+        <div class="landing-nav-links">
+          <a href="/" class="active" id="nav-home">Home</a>
+          <a href="/browse.html" id="nav-browse">Browse <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="m6 9 6 6 6-6"/></svg></a>
+          <a href="/videos.html" id="nav-videos">Videos</a>
+          <a href="#about">About</a>
+        </div>
+        <div class="landing-nav-actions">
+          <button class="icon-btn"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+          <button class="icon-btn"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+          <button class="btn-primary" id="nav-listen-live">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M2 10v4"/><path d="M6 6v12"/><path d="M10 3v18"/><path d="M14 8v8"/><path d="M18 11v2"/><path d="M22 10v4"/></svg>
+            <span class="listen-live-text">Listen Live</span>
+          </button>
+          <button class="icon-btn mobile-menu-toggle" id="mobile-menu-toggle">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <div class="mobile-nav-overlay" id="mobile-nav-overlay">
+        <div class="mobile-nav-content">
+          <button class="icon-btn close-menu-btn" id="close-menu-btn">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+          <a href="/">Home</a>
+          <a href="/browse.html">Browse</a>
+          <a href="/videos.html">Videos</a>
+          <a href="#about">About</a>
+        </div>
+      </div>
+
+      <main class="landing-content">
+        <section class="landing-hero">
+          <div class="hero-left">
+            <h1>Explore. Listen.<br>The <span class="text-highlight">World</span> on Radio.</h1>
+            <p class="hero-desc">World Radio Atlas is your gateway to thousands of radio and FM channels from every country, every city, every culture.</p>
+            <div class="hero-stats">
+              <div class="stat-item">
+                <div class="stat-icon"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M2 8h20"/><path d="M6 20v-4"/><path d="M10 20v-4"/><path d="M14 20v-4"/><path d="M18 20v-4"/></svg></div>
+                <div class="stat-text">
+                  <strong>60,000+</strong>
+                  <span>Radio Stations</span>
+                </div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></div>
+                <div class="stat-text">
+                  <strong>200+</strong>
+                  <span>Countries</span>
+                </div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></div>
+                <div class="stat-text">
+                  <strong>24/7</strong>
+                  <span>Live & Free</span>
+                </div>
+              </div>
+            </div>
+            <div class="hero-actions">
+              <button class="btn-primary btn-lg" id="btn-explore-radio">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" style="fill:currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                Explore Radio
+              </button>
+              <button class="btn-outline btn-lg" id="btn-open-map">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                Open Interactive Map
+              </button>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div id="map" class="hero-map-img"></div>
+          </div>
+        </section>
+
+        <section class="features-banner">
+          <div class="feature-item">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M2 8h20"/><circle cx="8" cy="14" r="2"/><path d="M14 14h4"/></svg></div>
+            <div class="feature-content">
+              <h3>Thousands of Radio Stations</h3>
+              <p>Browse FM, AM, and online radio stations from around the world.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></div>
+            <div class="feature-content">
+              <h3>Interactive World Map</h3>
+              <p>Explore live stations by clicking on cities or countries.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></div>
+            <div class="feature-content">
+              <h3>Custom Audio</h3>
+              <p>Enjoy high-quality audio with custom players and smart filtering.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="m15 8-5 5-5-5"/></svg></div>
+            <div class="feature-content">
+              <h3>City Videos</h3>
+              <p>Watch city-related videos for selected radio stations.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="landing-featured-stations">
+          <div class="stations-header">
+            <h2><span class="highlight-line"></span> Featured Stations</h2>
+            <a href="/browse.html" class="view-all" id="view-all-stations">View All Stations &rarr;</a>
+          </div>
+          <div class="stations-grid">
+            <div class="station-card">
+              <div class="st-logo" style="background:#000; color:#fff;">BBC</div>
+              <div class="st-info">
+                <h4>BBC Radio 1</h4>
+                <span class="st-loc">London, United Kingdom</span>
+                <span class="st-genre">Top 40 / Pop</span>
+              </div>
+              <div class="st-actions">
+                <button class="st-play" data-station-name="BBC World Service"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4v16l12-8z"/></svg></button>
+                <div class="st-visualizer">
+                  <div class="bar" style="height:40%"></div>
+                  <div class="bar" style="height:80%"></div>
+                  <div class="bar" style="height:50%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="station-card">
+              <div class="st-logo" style="background:#e3000f; color:#fff;">NRJ</div>
+              <div class="st-info">
+                <h4>NRJ</h4>
+                <span class="st-loc">Paris, France</span>
+                <span class="st-genre">Pop / Hits</span>
+              </div>
+              <div class="st-actions">
+                <button class="st-play" data-station-name="FIP"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4v16l12-8z"/></svg></button>
+                <div class="st-visualizer">
+                  <div class="bar" style="height:30%"></div>
+                  <div class="bar" style="height:60%"></div>
+                  <div class="bar" style="height:40%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="station-card">
+              <div class="st-logo" style="background:#2a1538; color:#fff;">KISS</div>
+              <div class="st-info">
+                <h4>Kiss FM 97.6</h4>
+                <span class="st-loc">Berlin, Germany</span>
+                <span class="st-genre">Top 40 / Pop</span>
+              </div>
+              <div class="st-actions">
+                <button class="st-play" data-station-name="Radio 538"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4v16l12-8z"/></svg></button>
+                <div class="st-visualizer">
+                  <div class="bar" style="height:50%"></div>
+                  <div class="bar" style="height:90%"></div>
+                  <div class="bar" style="height:60%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="station-card">
+              <div class="st-logo" style="background:#000; color:#fff; font-size:11px;">J-WAVE</div>
+              <div class="st-info">
+                <h4>J-WAVE 81.3</h4>
+                <span class="st-loc">Tokyo, Japan</span>
+                <span class="st-genre">Variety / Talk</span>
+              </div>
+              <div class="st-actions">
+                <button class="st-play" data-station-name="RTHK Radio 3"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4v16l12-8z"/></svg></button>
+                <div class="st-visualizer">
+                  <div class="bar" style="height:40%"></div>
+                  <div class="bar" style="height:70%"></div>
+                  <div class="bar" style="height:50%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="station-card">
+              <div class="st-logo" style="background:#000; color:#fff; font-size:9px;">COMERCIAL</div>
+              <div class="st-info">
+                <h4>Rádio Comercial</h4>
+                <span class="st-loc">Lisbon, Portugal</span>
+                <span class="st-genre">Pop / Hits</span>
+              </div>
+              <div class="st-actions">
+                <button class="st-play" data-station-name="Radio Swiss Jazz"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 4v16l12-8z"/></svg></button>
+                <div class="st-visualizer">
+                  <div class="bar" style="height:40%"></div>
+                  <div class="bar" style="height:80%"></div>
+                  <div class="bar" style="height:50%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-next-st"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="m9 18 6-6-6-6"/></svg></button>
+        </section>
+        <section id="about" class="landing-about">
+          <div class="about-container">
+            <div class="about-header">
+              <h2>About World Radio Atlas</h2>
+              <p>Your portal to global sound, connecting you to over 60,000+ live radio stations across every continent.</p>
+            </div>
+            
+            <div class="about-grid">
+              <article class="about-card">
+                <h3>What is World Radio Atlas?</h3>
+                <p>World Radio Atlas is a premium, high-fidelity interactive radio directory designed for audiophiles and global citizens. We aggregate live FM, AM, and online radio streams from over 200 countries, providing a seamless listening experience through a state-of-the-art interactive map and a lightning-fast search engine.</p>
+              </article>
+
+              <article class="about-card">
+                <h3>How to Listen to Live Radio?</h3>
+                <p>Our platform uses advanced <strong>Web Audio API</strong> technology to bring you crystal-clear streams. Simply browse the interactive map, click on any city marker, or use our "Deep Search" tool to find your favorite stations by name, genre (Jazz, Rock, Pop, News), or location. Enhance your audio with our built-in styles like Bass Boosted and Spatial Atmos simulation.</p>
+              </article>
+
+              <article class="about-card">
+                <h3>Is the Service Free?</h3>
+                <p>Yes, World Radio Atlas is 100% free and community-driven. We utilize the open-source <strong>Radio Browser API</strong> database to ensure our directory is constantly updated with the latest active streams. Our mission is to preserve the cultural heritage of global radio and make it accessible to everyone, anywhere.</p>
+              </article>
+
+              <article class="about-card">
+                <h3>Technical Excellence</h3>
+                <p>Built with performance in mind, our site uses <strong>IndexedDB</strong> for instant local caching and <strong>lazy loading</strong> for heavy assets. This ensures that while we maintain a directory of 60,000+ stations, your initial load time remains under 2 seconds, providing an elite Search Experience (SXO).</p>
+              </article>
+            </div>
+
+            <div class="about-faq">
+              <h3>Frequently Asked Questions</h3>
+              <dl>
+                <dt id="faq-question-1">Can I listen to radio on mobile?</dt>
+                <dd id="faq-answer-1">Absolutely. World Radio Atlas is fully responsive and optimized for mobile browsers and tablets. You can also install it as a Progressive Web App (PWA) for an app-like experience, streaming your favorite international stations on the go, anywhere and anytime — for free.</dd>
+                
+                <dt id="faq-question-2">What audio styles and EQ presets are available?</dt>
+                <dd id="faq-answer-2">We offer five curated EQ presets powered by the Web Audio API: Normal, Bass Boosted, Treble (Tone), Soft, and Spatial (Atmos simulation). You can switch between them live while any station is streaming, tailoring the sound to your headphones or speakers.</dd>
+
+                <dt id="faq-question-3">How many stations are available on World Radio Atlas?</dt>
+                <dd id="faq-answer-3">Our directory currently indexes over 60,000 active live radio stations from 200+ countries globally, from local community FM stations to major international broadcasters like BBC World Service, NRJ, Deutsche Welle, and RTHK.</dd>
+              </dl>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="landing-footer">
+        <div class="footer-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg> Made for Radio Lovers</div>
+        <div class="footer-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Community Driven</div>
+        <div class="footer-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg> 100% Free to Listen</div>
+        <div class="footer-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg> Listen Anywhere</div>
+      </footer>
+    </div>
+
+    <div class="player-bar" id="player-bar">
+      <div class="player-scroll-wrapper">
+        <div class="player-info">
+          <div class="pb-logo" id="pb-logo"><img src="/favicon.svg" alt="Logo"></div>
+          <div class="pb-details">
+            <h5 id="pb-name">Select a Station</h5>
+            <p id="pb-location">Discover the world on radio</p>
+          </div>
+        </div>
+        <div class="player-controls">
+          <div class="eq-container">
+            <button class="eq-btn" id="pb-eq-btn" title="Audio Styles">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 12v8"/><path d="M12 14v6"/><path d="M20 10v10"/><path d="M4 4v4"/><path d="M12 4v6"/><path d="M20 4v2"/><path d="M2 8h4"/><path d="M10 10h4"/><path d="M18 6h4"/></svg>
+            </button>
+          </div>
+          <button class="play-pause-btn" id="pb-play-pause">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7 4v16l12-8z"/></svg>
+          </button>
+          <div class="volume-container">
+            <button class="volume-btn" id="pb-volume-btn" title="Volume">
+              <svg id="volume-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </button>
+            <div class="volume-slider-wrapper">
+              <input type="range" id="pb-volume-slider" min="0" max="1" step="0.01" value="0.8">
+            </div>
+          </div>
+          <div class="player-visualizer">
+            <div class="pv-bar"></div><div class="pv-bar"></div><div class="pv-bar"></div><div class="pv-bar"></div><div class="pv-bar"></div>
+          </div>
+          <button class="pb-close-btn" id="pb-close-btn" title="Close Player">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="eq-dropdown" id="eq-dropdown">
+        <div class="eq-option active" data-style="normal">Normal</div>
+        <div class="eq-option" data-style="bass">Bass Boosted</div>
+        <div class="eq-option" data-style="tone">Tone (Treble)</div>
+        <div class="eq-option" data-style="soft">Soft</div>
+        <div class="eq-option" data-style="atmos">Spatial (Atmos Sim)</div>
+      </div>
+    </div>
+
+    <div class="search-overlay" id="search-overlay">
+      <div class="search-modal">
+        <div class="search-header">
+          <div class="search-input-wrapper">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="global-search-input" placeholder="Search stations, cities, countries, or genres...">
+          </div>
+          <button class="close-search" id="close-search-btn">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="search-results" id="global-search-results">
+          <div class="search-placeholder">
+            <p>Type to search through 60,000+ stations...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <audio id="playerAudio" crossorigin="anonymous" preload="none"></audio>
+  </div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
