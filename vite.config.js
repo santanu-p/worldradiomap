@@ -13,7 +13,8 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         browse: resolve(__dirname, 'browse.html'),
-        videos: resolve(__dirname, 'videos.html')
+        videos: resolve(__dirname, 'videos.html'),
+        404: resolve(__dirname, '404.html')
       }
     },
     assetsInlineLimit: 4096,

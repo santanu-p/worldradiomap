@@ -23,3 +23,6 @@
 /ar / 301
 /ar/ / 301
 /ar/* / 301
+
+# Catch-all for 404 page
+/* /404.html 404
