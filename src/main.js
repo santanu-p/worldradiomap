@@ -20,6 +20,36 @@ import { setupServiceWorker } from './pwa.js';
 const LIVE_FETCH_TIMEOUT_MS = 20000;
 const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v6';
 const LIVE_CACHE_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+// --- SESSION MANAGEMENT (Clear cache on fresh visit) ---
+(function() {
+  const SESSION_KEY = 'world-radio-atlas.session-active';
+  if (!sessionStorage.getItem(SESSION_KEY)) {
+    console.log('🧹 New session detected. Clearing caches to ensure fresh data...');
+    
+    // 1. Clear LocalStorage (Legacy station state)
+    localStorage.removeItem('world-radio-atlas.current-station');
+    
+    // 2. Clear IndexedDB (Radio Stations)
+    if (window.indexedDB) {
+      try {
+        indexedDB.deleteDatabase('WorldRadioAtlasDB');
+      } catch (e) {
+        console.warn('Could not delete IDB:', e);
+      }
+    }
+    
+    // 3. Clear Service Worker Cache (Assets)
+    if (window.caches) {
+      caches.keys().then(names => {
+        for (let name of names) caches.delete(name);
+      }).catch(e => console.warn('Could not clear caches:', e));
+    }
+    
+    sessionStorage.setItem(SESSION_KEY, 'true');
+  }
+})();
+
 let isBrowsePage = window.location.pathname.includes('browse.html');
 let isVideoPage = window.location.pathname.includes('videos.html');
 
@@ -199,8 +229,8 @@ function playStation(station) {
       showToast(`Playing: ${station.name}`);
       updateCityVideo(station);
       
-      // Persist state for cross-page navigation
-      localStorage.setItem('world-radio-atlas.current-station', JSON.stringify(station));
+      // Persist state for cross-page navigation within the same session
+      sessionStorage.setItem('world-radio-atlas.current-station', JSON.stringify(station));
     })
     .catch((err) => {
       clearTimeout(playTimeoutId);
@@ -666,7 +696,7 @@ function bindEvents() {
       const bar = document.getElementById('player-bar');
       if (bar) bar.classList.remove('visible');
       
-      localStorage.removeItem('world-radio-atlas.current-station');
+      sessionStorage.removeItem('world-radio-atlas.current-station');
       highlightActiveStation(null);
       document.body.classList.remove('is-playing');
       
@@ -1212,8 +1242,8 @@ setTimeout(() => {
     }
   }
 
-  // Restore state if available
-  const savedStation = localStorage.getItem('world-radio-atlas.current-station');
+  // Restore state if available in current session
+  const savedStation = sessionStorage.getItem('world-radio-atlas.current-station');
   if (savedStation) {
     try {
       const station = JSON.parse(savedStation);
