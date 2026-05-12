@@ -778,6 +778,7 @@ body.is-playing .landing-content {
   display: flex;
   align-items: center;
   z-index: 10000;
+  transform: translateY(110%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible; /* Allow dropdowns to escape */
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
@@ -1795,6 +1796,30 @@ body.is-playing .landing-content {
   height: 100%;
   opacity: 0;
   transition: opacity 1s;
+}
+
+.close-video-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 100;
+}
+
+.close-video-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
 }
 
 .video-player-wrapper.has-video iframe {

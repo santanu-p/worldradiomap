@@ -655,16 +655,29 @@ function bindEvents() {
   };
 
   const pbCloseBtn = document.getElementById('pb-close-btn');
-  if (pbCloseBtn) pbCloseBtn.onclick = () => {
-    state.audio.pause();
-    state.audio.src = '';
-    state.isPlaying = false;
-    state.currentStation = null;
-    document.getElementById('player-bar').classList.remove('visible');
-    localStorage.removeItem('world-radio-atlas.current-station');
-    highlightActiveStation(null);
-    document.body.classList.remove('is-playing');
-  };
+  if (pbCloseBtn) {
+    pbCloseBtn.onclick = (e) => {
+      e.stopPropagation();
+      state.audio.pause();
+      state.audio.src = '';
+      state.isPlaying = false;
+      state.currentStation = null;
+      
+      const bar = document.getElementById('player-bar');
+      if (bar) bar.classList.remove('visible');
+      
+      localStorage.removeItem('world-radio-atlas.current-station');
+      highlightActiveStation(null);
+      document.body.classList.remove('is-playing');
+      
+      // Also clear city video if any
+      const videoWrapper = document.getElementById('video-player-wrapper');
+      if (videoWrapper) {
+        videoWrapper.classList.remove('has-video');
+        videoWrapper.innerHTML = '';
+      }
+    };
+  }
 
   const pbPlayPauseBtn = document.getElementById('pb-play-pause');
   if (pbPlayPauseBtn) {
