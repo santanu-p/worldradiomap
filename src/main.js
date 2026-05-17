@@ -16,36 +16,18 @@ import {
 import { escapeHtml } from './htmlUtils.js';
 import { buildEmbedUrl, resolveCityVideoForStation } from './cityVideos.js';
 import { setupServiceWorker } from './pwa.js';
+import { buildFreshStreamUrl, isSupportedStreamUrl, resetAudioElement } from './streamUtils.js';
+import { getInternalNavigationUrl } from './navigationUtils.js';
+import { getStationColor, renderStationLogoMarkup } from './stationLogoUtils.js';
 
 const LIVE_FETCH_TIMEOUT_MS = 20000;
-const LIVE_CACHE_KEY = 'world-radio-atlas.live-stations.v6';
 const LIVE_CACHE_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
 
-// --- SESSION MANAGEMENT (Clear cache on fresh visit) ---
+// --- SESSION MANAGEMENT (legacy state cleanup only) ---
 (function() {
   const SESSION_KEY = 'world-radio-atlas.session-active';
   if (!sessionStorage.getItem(SESSION_KEY)) {
-    console.log('🧹 New session detected. Clearing caches to ensure fresh data...');
-    
-    // 1. Clear LocalStorage (Legacy station state)
     localStorage.removeItem('world-radio-atlas.current-station');
-    
-    // 2. Clear IndexedDB (Radio Stations)
-    if (window.indexedDB) {
-      try {
-        indexedDB.deleteDatabase('WorldRadioAtlasDB');
-      } catch (e) {
-        console.warn('Could not delete IDB:', e);
-      }
-    }
-    
-    // 3. Clear Service Worker Cache (Assets)
-    if (window.caches) {
-      caches.keys().then(names => {
-        for (let name of names) caches.delete(name);
-      }).catch(e => console.warn('Could not clear caches:', e));
-    }
-    
     sessionStorage.setItem(SESSION_KEY, 'true');
   }
 })();
@@ -90,16 +72,14 @@ state.audio.addEventListener('pause', () => {
 state.audio.addEventListener('error', () => {
   if (state.currentStation) {
     showToast(`Stream error for ${state.currentStation.name}. Please try another.`);
-    state.isPlaying = false;
-    updateGlobalPlayState();
+    stopLiveStream();
   }
 });
 
 state.audio.addEventListener('stalled', () => {
   if (state.isPlaying && state.currentStation) {
     showToast('Stream connection unstable. Reconnecting...');
-    state.audio.load();
-    state.audio.play().catch(()=>{});
+    startLiveStream(state.currentStation);
   }
 });
 
@@ -181,26 +161,44 @@ function updatePlayerBar(station) {
 
 let playTimeoutId = null;
 
-function playStation(station) {
-  if (state.currentStation && state.currentStation.id === station.id) {
-    if (state.isPlaying) {
-      state.audio.pause();
-    } else {
-      // Safety check for restored sessions
-      if (!state.audio.src || state.audio.src === window.location.href) {
-        state.audio.src = station.url;
-      }
-      state.audio.play().catch(() => showToast('Failed to resume playback.'));
-    }
+function stopLiveStream({ clearStation = false } = {}) {
+  if (playTimeoutId) {
+    clearTimeout(playTimeoutId);
+    playTimeoutId = null;
+  }
+
+  resetAudioElement(state.audio);
+  state.isPlaying = false;
+
+  if (clearStation) {
+    state.currentStation = null;
+    sessionStorage.removeItem('world-radio-atlas.current-station');
+    document.body.classList.remove('is-playing');
+  }
+
+  updateGlobalPlayState();
+}
+
+function startLiveStream(station) {
+  const streamUrl = buildFreshStreamUrl(station.url);
+  if (!streamUrl) {
+    showToast('Unsupported stream URL. Try another station.');
     return;
+  }
+
+  if (playTimeoutId) {
+    clearTimeout(playTimeoutId);
+    playTimeoutId = null;
   }
 
   state.currentStation = station;
   document.body.classList.add('is-playing');
-  state.audio.src = station.url;
+  resetAudioElement(state.audio);
+  state.audio.preload = 'none';
+  state.audio.src = streamUrl;
   state.audio.volume = state.volume;
   state.isPlaying = false;
-  
+
   showToast(`Connecting to: ${station.name}...`);
   updatePlayerBar(station);
   highlightActiveStation(station.id);
@@ -217,8 +215,7 @@ function playStation(station) {
   
   playTimeoutId = setTimeout(() => {
     if (!state.isPlaying) {
-      state.audio.pause();
-      state.audio.src = '';
+      stopLiveStream();
       showToast('Stream timed out. Station may be offline.');
     }
   }, 10000);
@@ -234,10 +231,26 @@ function playStation(station) {
     })
     .catch((err) => {
       clearTimeout(playTimeoutId);
+      playTimeoutId = null;
+      resetAudioElement(state.audio);
       if (err.name !== 'AbortError') {
         showToast('Could not play this station. Stream offline.');
       }
     });
+}
+
+function playStation(station) {
+  if (!station || !isSupportedStreamUrl(station.url)) {
+    showToast('Unsupported stream URL. Try another station.');
+    return;
+  }
+
+  if (state.currentStation && state.currentStation.id === station.id && state.isPlaying) {
+    stopLiveStream();
+    return;
+  }
+
+  startLiveStream(station);
 }
 
 let cityVideoRequestId = 0;
@@ -552,7 +565,7 @@ function initGlobalListeners() {
     if (!link) return;
 
     const href = link.getAttribute('href');
-    if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+    if (!href || href.startsWith('mailto:') || href.startsWith('tel:')) return;
 
     // Anchor links (e.g., #about)
     if (href.startsWith('#')) {
@@ -579,25 +592,22 @@ function initGlobalListeners() {
     }
 
     // Internal links (Home, Browse, Videos)
-    const isInternal = href.startsWith('/') || 
-                       href.startsWith(window.location.origin) || 
-                       !href.includes('://');
+    const internalUrl = getInternalNavigationUrl(href, window.location.origin);
 
-    if (isInternal) {
-      const url = new URL(href, window.location.origin);
-      const targetPath = url.pathname;
+    if (internalUrl) {
+      const targetPath = internalUrl.pathname;
       const currentPath = window.location.pathname;
       
       // If already on the target page, just scroll to top
       if (targetPath === currentPath || (targetPath === '/' && currentPath === '/index.html')) {
-        if (url.hash) return; 
+        if (internalUrl.hash) return; 
         e.preventDefault();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
       e.preventDefault();
-      navigateTo(href);
+      navigateTo(`${internalUrl.pathname}${internalUrl.search}${internalUrl.hash}`);
     }
   });
 
@@ -688,17 +698,12 @@ function bindEvents() {
   if (pbCloseBtn) {
     pbCloseBtn.onclick = (e) => {
       e.stopPropagation();
-      state.audio.pause();
-      state.audio.src = '';
-      state.isPlaying = false;
-      state.currentStation = null;
+      stopLiveStream({ clearStation: true });
       
       const bar = document.getElementById('player-bar');
       if (bar) bar.classList.remove('visible');
       
-      sessionStorage.removeItem('world-radio-atlas.current-station');
       highlightActiveStation(null);
-      document.body.classList.remove('is-playing');
       
       // Also clear city video if any
       const videoWrapper = document.getElementById('video-player-wrapper');
@@ -713,20 +718,7 @@ function bindEvents() {
   if (pbPlayPauseBtn) {
     pbPlayPauseBtn.onclick = () => {
       if (!state.currentStation) return;
-      
-      // Ensure source is set (important for restored sessions)
-      if (!state.audio.src || state.audio.src === window.location.href) {
-        state.audio.src = state.currentStation.url;
-      }
-
-      if (state.isPlaying) {
-        state.audio.pause();
-      } else {
-        state.audio.play().catch((err) => {
-          console.error('Playback failed:', err);
-          showToast('Failed to resume playback. Try another station.');
-        });
-      }
+      playStation(state.currentStation);
     };
   }
 
@@ -828,7 +820,9 @@ function bindEvents() {
           const res = await fetch(`${API_SERVERS[0]}/json/stations/search?name=${encodeURIComponent(query)}&limit=15`);
           if (res.ok) {
             const raw = await res.json();
-            const apiM = raw.map(i => ({ id: i.stationuuid, name: i.name, url: i.url_resolved, favicon: i.favicon, tags: i.tags, lat: i.geo_lat ? Number(i.geo_lat) : null, lng: i.geo_long ? Number(i.geo_long) : null, country: i.country, city: i.state })).filter(s => s.url && s.name);
+            const apiM = raw
+              .map(i => ({ id: i.stationuuid, name: i.name, url: i.url_resolved, tags: i.tags, lat: i.geo_lat ? Number(i.geo_lat) : null, lng: i.geo_long ? Number(i.geo_long) : null, country: i.country, city: i.state }))
+              .filter(s => s.url && s.name && isSupportedStreamUrl(s.url));
             const finalM = [...matches, ...apiM.filter(m => !matches.find(ex => ex.id === m.id))].slice(0, 15);
             renderMatches(finalM);
           }
@@ -1012,14 +1006,12 @@ function _doRenderAllStations(grid) {
     const name = String(s.name || '');
     const cityOrCountry = s.city || s.country || '';
     const primaryTag = s.tags ? String(s.tags).split(',')[0] : 'Live Stream';
-    const stationInitial = name.charAt(0).toUpperCase();
-    const logoContent = s.favicon
-      ? `<img src="${escapeHtml(s.favicon)}" alt="${escapeHtml(name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"><span style="display:none; font-size:24px; font-weight:800;">${escapeHtml(stationInitial)}</span>`
-      : `<span style="font-size:24px; font-weight:800;">${escapeHtml(stationInitial)}</span>`;
+    const stationSeed = s.id || name || cityOrCountry;
+    const logoContent = renderStationLogoMarkup(s);
     
     return `
       <div class="station-card list-card ${isActive ? 'active' : ''}" data-station-id="${escapeHtml(s.id)}" data-station-name="${escapeHtml(name)}">
-        <div class="st-logo" style="background: ${getRandomColor()}; color: #fff;">
+        <div class="st-logo" style="background: ${getStationColor(stationSeed)}; color: #fff;">
           ${logoContent}
         </div>
         <div class="st-info">
@@ -1046,11 +1038,6 @@ function _doRenderAllStations(grid) {
   });
 }
 
-function getRandomColor() {
-  const colors = ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6', '#f59e0b', '#06b6d4'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
 async function fetchLiveStations() {
   if (state.loadingStations) return;
   state.loadingStations = true;
@@ -1073,7 +1060,6 @@ async function fetchLiveStations() {
       id: item.stationuuid,
       name: item.name,
       url: item.url_resolved,
-      favicon: item.favicon,
       tags: item.tags,
       lat: lat,
       lng: lng,
@@ -1164,7 +1150,7 @@ async function fetchLiveStations() {
 
 // --- IndexedDB helpers for caching all stations ---
 const IDB_NAME = 'WorldRadioAtlasDB';
-const IDB_VERSION = 1;
+const IDB_VERSION = 2;
 const IDB_STORE = 'stationCache';
 
 function openIDB() {
@@ -1174,8 +1160,12 @@ function openIDB() {
     req.onsuccess = () => resolve(req.result);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+      const store = db.objectStoreNames.contains(IDB_STORE)
+        ? e.target.transaction.objectStore(IDB_STORE)
+        : db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+
+      if (e.oldVersion < 2) {
+        store.clear();
       }
     };
   });
@@ -1251,10 +1241,8 @@ setTimeout(() => {
       state.currentStation = station;
       updateCityVideo(station);
       
-      // Initialize audio source but stay paused
-      state.audio.src = station.url;
-      state.audio.preload = 'none'; // Don't waste data until user clicks play
-      state.audio.pause();
+      // Keep restored sessions idle until the user explicitly starts a fresh stream.
+      resetAudioElement(state.audio);
       state.isPlaying = false;
       
       const btn = document.getElementById('pb-play-pause');

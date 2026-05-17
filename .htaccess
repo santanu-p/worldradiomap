@@ -23,9 +23,9 @@
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
-    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src http: https:; connect-src 'self' https://de1.api.radio-browser.info https://de2.api.radio-browser.info https://nl1.api.radio-browser.info https://at1.api.radio-browser.info https://fr1.api.radio-browser.info https://api.allorigins.win; frame-src https://www.youtube.com https://www.youtube-nocookie.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'self'"
 </IfModule>
 
 # Redirect www to non-www (choose one)

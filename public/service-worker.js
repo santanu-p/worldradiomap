@@ -1,4 +1,4 @@
-const CACHE_NAME = 'world-radio-atlas-shell-v2026-05-14';
+const CACHE_NAME = 'world-radio-atlas-shell-v2026-05-17';
 
 const CORE_ASSETS = [
     '/',
@@ -6,7 +6,6 @@ const CORE_ASSETS = [
     '/browse.html',
     '/404.html',
     '/manifest.json',
-    '/favicon_io/site.webmanifest',
     '/favicon.svg',
     '/logo.svg'
 ];
@@ -21,6 +20,10 @@ function isLocalDevelopmentUrl(url) {
 function shouldCacheRequest(request) {
     const url = new URL(request.url);
     if (isLocalDevelopmentUrl(url)) {
+        return false;
+    }
+
+    if (url.origin !== self.location.origin) {
         return false;
     }
 
@@ -40,28 +43,15 @@ function shouldCacheRequest(request) {
         return false;
     }
 
-    // 4. RESTRICT Image Caching
-    // Only cache images from our own origin (UI icons, logo, etc.)
-    // This prevents caching 60,000+ external station favicons.
-    if (request.destination === 'image' && url.origin !== self.location.origin) {
-        return false;
-    }
-
-    // 5. Exclude large media extensions from same-origin caching
+    // 4. Exclude large media extensions from same-origin caching
     const path = url.pathname.toLowerCase();
     const mediaExtensions = ['.mp3', '.aac', '.mp4', '.m4v', '.m4a', '.webm', '.ogg', '.wav', '.flac'];
     if (mediaExtensions.some(ext => path.endsWith(ext))) {
         return false;
     }
 
-    // 6. Cache same-origin assets (HTML, CSS, JS, manifest, etc.)
-    if (url.origin === self.location.origin) {
-        return true;
-    }
-
-    // 7. For external origins, ONLY cache specific static UI scripts/styles/fonts
-    // We specifically EXCLUDE images here to prevent favicon bloat.
-    return ['style', 'script', 'font'].includes(request.destination);
+    // 5. Cache only same-origin app-shell assets.
+    return true;
 }
 
 self.addEventListener('install', (event) => {
@@ -141,7 +131,7 @@ self.addEventListener('fetch', (event) => {
             event.waitUntil((async () => {
                 try {
                     const freshResponse = await fetch(event.request);
-                    if (freshResponse && freshResponse.status !== 206 && (freshResponse.ok || freshResponse.type === 'opaque')) {
+                    if (freshResponse && freshResponse.status !== 206 && freshResponse.ok) {
                         const cache = await caches.open(CACHE_NAME);
                         await cache.put(event.request, freshResponse.clone());
                     }
@@ -155,9 +145,8 @@ self.addEventListener('fetch', (event) => {
         try {
             const response = await fetch(event.request);
             
-            // Final safety check: Don't cache if it's partial content (streaming)
-            // or if it's an opaque response that we didn't explicitly allow in shouldCacheRequest
-            if (response && response.status !== 206 && (response.ok || response.type === 'opaque')) {
+            // Final safety check: don't cache partial content or opaque responses.
+            if (response && response.status !== 206 && response.ok) {
                 const cache = await caches.open(CACHE_NAME);
                 await cache.put(event.request, response.clone());
             }
