@@ -617,8 +617,12 @@ function updateMapMarkers(stations) {
 
   const featuredIds = ['wfmu-new-jersey', 'bbc-world-service', 'fip-france', 'radio-538', 'rthk-radio-3', 'triple-j'];
   const colors = ['sl-blue', 'sl-red', 'sl-purple', 'sl-green', 'sl-yellow', 'sl-blue'];
+  const markers = [];
 
-  stations.forEach((station, index) => {
+  // Plot up to 25,000 top stations on the map cluster to ensure 60fps performance across mobile and desktop
+  const mapSubset = stations.length > 25000 ? stations.slice(0, 25000) : stations;
+
+  mapSubset.forEach((station, index) => {
     if (station.lat === null || station.lng === null) return;
 
     let marker;
@@ -656,8 +660,14 @@ function updateMapMarkers(stations) {
     }
 
     marker.on('click', () => playStation(station));
-    state.clusters.addLayer(marker);
+    markers.push(marker);
   });
+
+  if (typeof state.clusters.addLayers === 'function') {
+    state.clusters.addLayers(markers);
+  } else {
+    markers.forEach(m => state.clusters.addLayer(m));
+  }
 }
 
 function initializeMap() {
