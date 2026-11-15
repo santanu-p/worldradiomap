@@ -184,35 +184,43 @@ export async function fetchAllActiveStations(onProgress) {
   }
 
   // 2. Fetch fresh catalog from mirrors with pagination
-  const PAGE_SIZE = 15000;
-  const MAX_STATIONS = 60000;
+  const PAGE_SIZE = 10000;
+  const MAX_STATIONS = 70000;
   let allStations = [];
 
   for (let offset = 0; offset < MAX_STATIONS; offset += PAGE_SIZE) {
     if (onProgress) onProgress(allStations.length);
 
-    try {
-      const { data } = await fetchWithMirrorRotation((mirror) => {
-        return `${mirror}/json/stations/search?order=votes&reverse=true&hidebroken=true&is_https=true&limit=${PAGE_SIZE}&offset=${offset}`;
-      }, { timeoutMs: 5000 });
+    let chunkData = null;
+    let attempts = 0;
+    while (!chunkData && attempts < 2) {
+      attempts++;
+      try {
+        const { data } = await fetchWithMirrorRotation((mirror) => {
+          return `${mirror}/json/stations/search?order=votes&reverse=true&hidebroken=true&limit=${PAGE_SIZE}&offset=${offset}`;
+        }, { timeoutMs: 8000 });
 
-      if (!data || data.length === 0) break;
-
-      const normalized = data
-        .map(normalizeStation)
-        .filter(s => s.url && s.name && isSupportedStreamUrl(s.url));
-
-      allStations.push(...normalized);
-
-      if (data.length < PAGE_SIZE) break;
-    } catch (err) {
-      console.warn(`Station fetch chunk at offset ${offset} failed:`, err);
-      if (allStations.length > 500) {
-        break; // Partial success is better than failure
+        if (Array.isArray(data)) {
+          chunkData = data;
+        }
+      } catch (err) {
+        console.warn(`Station fetch chunk at offset ${offset} (attempt ${attempts}) failed:`, err);
+        rotateMirror();
       }
-      // If first chunk failed completely, break to fallback
-      break;
     }
+
+    if (!chunkData || chunkData.length === 0) {
+      break; // Reached end of stations or persistent network issue
+    }
+
+    const normalized = chunkData
+      .map(normalizeStation)
+      .filter(s => s.url && s.name && isSupportedStreamUrl(s.url));
+
+    allStations.push(...normalized);
+
+    // If API returned fewer stations than requested, we've loaded the entire database
+    if (chunkData.length < PAGE_SIZE) break;
   }
 
   // 3. Deduplicate
@@ -242,20 +250,43 @@ export async function fetchAllActiveStations(onProgress) {
  * Background silent refresh
  */
 export async function backgroundRefreshStations() {
-  try {
-    const { data } = await fetchWithMirrorRotation((mirror) => {
-      return `${mirror}/json/stations/search?order=votes&reverse=true&hidebroken=true&is_https=true&limit=25000`;
-    }, { timeoutMs: 6000 });
+  const PAGE_SIZE = 10000;
+  const MAX_STATIONS = 70000;
+  let allStations = [];
 
-    if (data && data.length > 1000) {
+  for (let offset = 0; offset < MAX_STATIONS; offset += PAGE_SIZE) {
+    try {
+      const { data } = await fetchWithMirrorRotation((mirror) => {
+        return `${mirror}/json/stations/search?order=votes&reverse=true&hidebroken=true&limit=${PAGE_SIZE}&offset=${offset}`;
+      }, { timeoutMs: 8000 });
+
+      if (!data || data.length === 0) break;
+
       const normalized = data
         .map(normalizeStation)
         .filter(s => s.url && s.name && isSupportedStreamUrl(s.url));
-      await saveStationsToIDB(normalized);
-      console.log(`Background refreshed ${normalized.length} stations`);
+
+      allStations.push(...normalized);
+
+      if (data.length < PAGE_SIZE) break;
+    } catch (err) {
+      console.debug('Background refresh chunk postponed:', err.message);
+      break;
     }
-  } catch (err) {
-    console.debug('Background refresh postponed:', err.message);
+  }
+
+  if (allStations.length > 1000) {
+    const seenIds = new Set();
+    const deduplicated = [];
+    for (const st of allStations) {
+      if (!seenIds.has(st.id) && !seenIds.has(st.url)) {
+        seenIds.add(st.id);
+        seenIds.add(st.url);
+        deduplicated.push(st);
+      }
+    }
+    await saveStationsToIDB(deduplicated);
+    console.log(`Background refreshed ${deduplicated.length} stations`);
   }
 }
 
