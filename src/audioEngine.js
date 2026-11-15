@@ -76,6 +76,13 @@ export class AudioEngine {
     });
 
     this.audio.addEventListener('error', (e) => {
+      // Ignore error if audio element was intentionally reset, has no src, or is currently idle
+      if (this._isResetting || !this.currentStation || this.fsm.state === 'idle') {
+        return;
+      }
+      if (!this.audio.src || this.audio.src === window.location.href) {
+        return;
+      }
       console.warn('Audio element error event:', e);
       this._handleStreamError();
     });
@@ -205,7 +212,9 @@ export class AudioEngine {
     const streamUrl = buildFreshStreamUrl(station.url);
 
     this._cleanupHls();
+    this._isResetting = true;
     resetAudioElement(this.audio);
+    this._isResetting = false;
     this.audio.removeAttribute('crossorigin');
     this.audio.preload = 'none';
     this.audio.volume = this.volume;
@@ -227,6 +236,10 @@ export class AudioEngine {
 
   _handleStreamError() {
     this._clearWatchdog();
+
+    if (this._isResetting || !this.currentStation || this.fsm.state === 'idle') {
+      return;
+    }
 
     // If we were attempting DSP / anonymous mode and failed, try Direct Stream fallback first
     if (!this.isDirectStream && this.currentStation) {
@@ -332,7 +345,9 @@ export class AudioEngine {
       return;
     }
 
+    this._isResetting = true;
     resetAudioElement(this.audio);
+    this._isResetting = false;
 
     if (forceDirect) {
       this.audio.removeAttribute('crossorigin');
@@ -385,7 +400,9 @@ export class AudioEngine {
   stop({ clearStation = false } = {}) {
     this._clearWatchdog();
     this._cleanupHls();
+    this._isResetting = true;
     resetAudioElement(this.audio);
+    this._isResetting = false;
     this.isPlaying = false;
     this.fsm.send('STOP');
 
