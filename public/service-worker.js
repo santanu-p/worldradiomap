@@ -4,6 +4,7 @@ const CORE_ASSETS = [
     '/',
     '/index.html',
     '/browse.html',
+    '/videos.html',
     '/404.html',
     '/manifest.json',
     '/favicon.svg',

@@ -23,23 +23,19 @@ export const regionBounds = {
 export const mapStyles = {
   paper: {
     label: 'Paper',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     options: {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
-      detectRetina: true,
       alt: 'Map tile'
     }
   },
   night: {
     label: 'Night',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     options: {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
-      detectRetina: true,
+      attribution: 'Tiles &copy; Esri &mdash; DeLorme, NAVTEQ',
+      maxZoom: 16,
       alt: 'Map tile'
     }
   },
@@ -280,10 +276,9 @@ export const countryCentroids = {
 // API server list for redundancy — Radio Browser mirrors
 export const API_SERVERS = [
   'https://de1.api.radio-browser.info',
-  'https://de2.api.radio-browser.info',
-  'https://nl1.api.radio-browser.info',
+  'https://fi1.api.radio-browser.info',
   'https://at1.api.radio-browser.info',
-  'https://fr1.api.radio-browser.info'
+  'https://nl1.api.radio-browser.info'
 ];
 
 // Featured stations shown on homepage cards — curated best-of
