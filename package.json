@@ -1,7 +1,7 @@
 {
   "name": "world-radio-atlas",
   "private": true,
-  "version": "1.1.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "hls.js": "^1.7.4",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3"
   },

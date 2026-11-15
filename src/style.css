@@ -275,7 +275,9 @@ body.is-playing .landing-content {
 
 .hero-actions {
   display: flex;
+  align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 /* --- Map --- */
@@ -1011,6 +1013,612 @@ body.is-playing .landing-content {
   0% { height: 6px; transform: scaleY(1); opacity: 0.6; }
   50% { height: 18px; transform: scaleY(1.2); opacity: 1; }
   100% { height: 24px; transform: scaleY(1); opacity: 0.8; }
+}
+
+/* === Elevated Glassmorphic Dock Enhancements === */
+.pb-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pb-favorite-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.pb-favorite-btn:hover {
+  color: #f43f5e;
+  transform: scale(1.15);
+}
+
+.pb-favorite-btn.active {
+  color: #f43f5e;
+}
+
+.pb-favorite-btn.active svg {
+  fill: #f43f5e;
+}
+
+.pb-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pb-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pb-badge-stream {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.pb-badge-stream.direct-mode {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.pb-badge-codec {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pb-weather-pill {
+  font-size: 11px;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-visualizer-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+#pb-canvas-visualizer {
+  display: block;
+  border-radius: 4px;
+}
+
+.icon-tool-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  color: #cbd5e1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.icon-tool-btn:hover, .icon-tool-btn.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+.eq-btn {
+  position: relative;
+  gap: 6px;
+  width: auto;
+  padding: 0 12px;
+  border-radius: 999px;
+}
+
+.eq-preset-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.sleep-timer-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: #f43f5e;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 999px;
+}
+
+/* Ambient Mixer Drawer */
+.ambient-container {
+  position: relative;
+}
+
+.ambient-drawer {
+  position: absolute;
+  bottom: 80px;
+  right: 180px;
+  width: 280px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 18px;
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  z-index: 10002;
+}
+
+.ambient-drawer.show {
+  display: flex;
+}
+
+.drawer-header h6 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.drawer-sub {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ambient-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ambient-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.ambient-slider {
+  flex: 1;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+/* Sleep Dropdown */
+.sleep-container {
+  position: relative;
+}
+
+.sleep-dropdown {
+  position: absolute;
+  bottom: 80px;
+  right: 120px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 8px;
+  min-width: 170px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  z-index: 10002;
+}
+
+.sleep-dropdown.show {
+  display: flex;
+}
+
+.sleep-option {
+  padding: 9px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #cbd5e1;
+  transition: all 0.2s;
+}
+
+.sleep-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.sleep-option.active {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.sleep-option.sleep-cancel {
+  color: #f87171;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Nav Passport Button */
+.nav-passport-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-passport-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #f43f5e;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
+}
+
+/* Surprise Me Button */
+.btn-surprise {
+  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
+  color: #fff;
+  border: none;
+  border-radius: 99px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.2;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-surprise:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 30px rgba(236, 72, 153, 0.5), 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+.btn-surprise svg {
+  flex-shrink: 0;
+}
+
+/* Cinema Mode */
+.btn-cinema {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cinema.active {
+  background: #38bdf8;
+  color: #030712;
+  border-color: #38bdf8;
+}
+
+.video-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.video-page-main.cinema-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: #000;
+  padding: 0;
+  margin: 0;
+}
+
+.video-page-main.cinema-mode .video-container {
+  max-width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.video-page-main.cinema-mode .video-header,
+.video-page-main.cinema-mode .video-featured-suggestions {
+  display: none !important;
+}
+
+.video-page-main.cinema-mode .video-player-wrapper {
+  border-radius: 0;
+  height: 100vh;
+  aspect-ratio: auto;
+  border: none;
+}
+
+.video-page-main.cinema-mode .close-cinema-floating {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 10005;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+/* Passport & Favorites Modal */
+.passport-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+  padding: 20px;
+}
+
+.passport-modal-overlay.active {
+  display: flex;
+}
+
+.passport-modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.passport-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.passport-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.passport-tab {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.passport-tab.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.close-passport-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-passport-btn:hover {
+  color: #fff;
+}
+
+.passport-tab-content {
+  display: none;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.passport-tab-content.active {
+  display: block;
+}
+
+.passport-stats-banner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.p-stat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.p-stat strong {
+  display: block;
+  font-size: 28px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  color: #38bdf8;
+  line-height: 1.1;
+}
+
+.p-stat span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.stamps-title {
+  font-size: 14px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+
+.passport-stamps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.stamp-badge {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px dashed rgba(56, 189, 248, 0.4);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.stamp-badge:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+}
+
+.stamp-icon {
+  font-size: 22px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stamp-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: block;
+}
+
+.stamp-date {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.passport-empty-hint {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 30px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.favorites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.fav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fav-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.fav-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.fav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fav-play-btn {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fav-remove-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 16px;
 }
 
 /* === All Stations Section (Browse Page) === */
